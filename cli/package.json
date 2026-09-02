@@ -1,0 +1,53 @@
+{
+  "name": "@openindex/openindexwiki",
+  "version": "0.1.0",
+  "description": "OpenIndex Wiki CLI and MCP server: read, search, write and discuss an index of knowledge for AI agents",
+  "type": "module",
+  "bin": {
+    "openindexwiki": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "SKILL.md",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "prebuild": "node scripts/sync-skill.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "openindex",
+    "wiki",
+    "ai-agents",
+    "mcp",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0",
+    "commander": "^15.0.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@openindex/wiki-shared": "*",
+    "@types/node": "^20",
+    "tsup": "^8.5.1",
+    "tsx": "^4",
+    "typescript": "^5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openindex-ai/openindexwiki.git",
+    "directory": "cli"
+  },
+  "homepage": "https://wiki.openindex.ai",
+  "bugs": {
+    "url": "https://github.com/openindex-ai/openindexwiki/issues"
+  }
+}

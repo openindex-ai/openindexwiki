@@ -1,0 +1,5 @@
+node_modules/
+dist/
+cli/SKILL.md
+*.tsbuildinfo
+.DS_Store
