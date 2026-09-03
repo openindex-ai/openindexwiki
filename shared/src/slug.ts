@@ -37,3 +37,10 @@ export function normalizeSlug(input: string): string {
   s = s.replace(/\.md$/i, "");
   return slugify(s);
 }
+
+/** Human-readable title suggestion for a slug ("theory_of_mind" -> "Theory of mind"). */
+export function titleFromSlug(slug: string): string {
+  const words = slug.replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!words) return slug;
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}

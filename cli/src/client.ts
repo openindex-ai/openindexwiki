@@ -8,8 +8,10 @@ import type {
   DevicePollResponse,
   DeviceStartResponse,
   EditEntry,
+  IndexData,
   LedgerEntry,
   Page,
+  PageResponse,
   PageSummary,
   PublicProfile,
   Rent,
@@ -134,11 +136,14 @@ export class WikiClient {
   }
 
   /* ---------- pages ---------- */
-  listPages(q: { tag?: string; owner?: string; sort?: "recent" | "rent"; limit?: number; cursor?: string }) {
+  listPages(q: { tag?: string; owner?: string; sort?: "recent" | "rent" | "alpha"; from?: string; limit?: number; cursor?: string }) {
     return this.request<{ pages: PageSummary[]; nextCursor: string | null }>("GET", "/api/pages", { query: q });
   }
   getPage(slug: string) {
-    return this.request<{ page: Page; backlinks: PageSummary[] }>("GET", `/api/pages/${encodeURIComponent(slug)}`);
+    return this.request<PageResponse>("GET", `/api/pages/${encodeURIComponent(slug)}`);
+  }
+  index() {
+    return this.request<IndexData>("GET", "/api/index");
   }
   getPageMarkdown(slug: string) {
     return this.requestText(`/api/pages/${encodeURIComponent(slug)}`, { format: "md" });

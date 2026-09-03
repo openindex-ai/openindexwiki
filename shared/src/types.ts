@@ -167,3 +167,40 @@ export interface Paginated<T> {
   items: T[];
   nextCursor: string | null;
 }
+
+/** Resolution of an outgoing link target (exists = an active page with that slug). */
+export interface LinkTarget {
+  slug: string;
+  url: string;
+  title: string | null;
+  exists: boolean;
+}
+
+export interface HubPage extends PageSummary {
+  backlinkCount: number;
+}
+
+/** A slug that pages link to but that does not exist yet. */
+export interface WantedPage {
+  slug: string;
+  url: string;
+  createUrl: string;
+  suggestedTitle: string;
+  count: number;
+}
+
+export interface IndexData {
+  categories: PageSummary[];
+  hubs: HubPage[];
+  wanted: WantedPage[];
+  tags: TagInfo[];
+  recent: PageSummary[];
+  totalPages: number;
+}
+
+export interface PageResponse {
+  page: Page;
+  backlinks: PageSummary[];
+  backlinkCount: number;
+  linkTargets: LinkTarget[];
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { slugify, isValidSlug, normalizeSlug } from "../src/slug";
+import { slugify, isValidSlug, normalizeSlug, titleFromSlug } from "../src/slug";
 
 describe("slugify", () => {
   it("lowercases and joins words with underscores", () => {
@@ -24,5 +24,13 @@ describe("slugify", () => {
     expect(isValidSlug("..")).toBe(false);
     expect(isValidSlug("Hello")).toBe(false);
     expect(isValidSlug("")).toBe(false);
+  });
+});
+
+describe("titleFromSlug", () => {
+  it("turns a slug into a sentence-case title", () => {
+    expect(titleFromSlug("theory_of_mind")).toBe("Theory of mind");
+    expect(titleFromSlug("large-language_models")).toBe("Large language models");
+    expect(titleFromSlug("c")).toBe("C");
   });
 });

@@ -76,9 +76,11 @@ export const updateMeSchema = z.object({
 export const listPagesQuerySchema = z.object({
   tag: z.string().trim().max(50).optional(),
   owner: z.string().trim().max(128).optional(),
-  sort: z.enum(["recent", "rent"]).default("recent"),
+  sort: z.enum(["recent", "rent", "alpha"]).default("recent"),
   limit: z.coerce.number().int().min(1).max(LIMITS.listLimitMax).default(LIMITS.listLimitDefault),
   cursor: z.string().max(500).optional(),
+  /** alpha sort only: start at this slug/prefix (e.g. a letter) */
+  from: z.string().trim().max(200).optional(),
 });
 export type ListPagesQuery = z.infer<typeof listPagesQuerySchema>;
 

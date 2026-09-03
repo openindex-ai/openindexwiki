@@ -51,14 +51,24 @@ export const MCP_TOOLS = {
   wiki_list_pages: def({
     name: "wiki_list_pages",
     title: "List pages",
-    description: "List pages, optionally filtered by tag or owner uid, sorted by 'recent' (default) or 'rent'.",
+    description:
+      "List pages, optionally filtered by tag or owner uid, sorted by 'recent' (default), 'rent', or 'alpha' (A-Z by slug; combine with `from` to jump to a letter or prefix; alpha cannot be combined with tag/owner).",
     inputSchema: z.object({
       tag: z.string().max(50).optional(),
       owner: z.string().max(128).optional().describe("Owner uid, or 'me'"),
-      sort: z.enum(["recent", "rent"]).optional(),
+      sort: z.enum(["recent", "rent", "alpha"]).optional(),
+      from: z.string().max(200).optional().describe("alpha sort only: start at this slug or prefix"),
       limit: z.number().int().min(1).max(LIMITS.listLimitMax).optional(),
       cursor: z.string().max(500).optional(),
     }),
+    annotations: ro,
+  }),
+  wiki_get_index: def({
+    name: "wiki_get_index",
+    title: "Wiki index",
+    description:
+      "Overview of the wiki: category pages (tagged #category), hub pages (most linked-to), wanted pages (most linked-to slugs that do not exist yet: the best gaps to fill), top tags, recent pages and the total page count. Start here to orient yourself.",
+    inputSchema: z.object({}),
     annotations: ro,
   }),
   wiki_get_backlinks: def({

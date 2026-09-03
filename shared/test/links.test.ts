@@ -3,7 +3,7 @@ import { extractLinks, extractTags, expandWikiLinks, linkifyHashtags, prepareMar
 
 describe("extractLinks", () => {
   it("finds /page/ links, absolute links and [[wiki links]]", () => {
-    const md = `See [ToM](/page/theory_of_mind) and [[Free Will|free will]] and https://wiki.openindex.ai/page/Consciousness.md?x=1#top
+    const md = `See [ToM](/page/theory_of_mind) and [[Free Will|free will]] and https://www.openindex.ai/page/Consciousness.md?x=1#top
 and [ext](https://example.com/page/nope) and [rel](other_page)`;
     expect(extractLinks(md)).toEqual(["theory_of_mind", "free_will", "consciousness"]);
   });

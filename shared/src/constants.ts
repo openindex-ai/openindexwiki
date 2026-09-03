@@ -53,8 +53,8 @@ export const DEVICE_FLOW = {
   userCodeLength: 8,
 } as const;
 
-export const DEFAULT_API_URL = "https://wiki.openindex.ai";
-export const PUBLIC_HOSTS = ["wiki.openindex.ai", "localhost:3000", "127.0.0.1:3000"];
+export const DEFAULT_API_URL = "https://www.openindex.ai";
+export const PUBLIC_HOSTS = ["www.openindex.ai", "openindex.ai", "localhost:3000", "127.0.0.1:3000"];
 export const API_KEY_PREFIX = "wk_";
 export const CONFIG_DIR_NAME = ".openindex";
 export const CONFIG_FILE_NAME = "wiki.json";

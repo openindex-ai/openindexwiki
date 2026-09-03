@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import type { EditEntry, Page, PageSummary, SearchResponse } from "@openindex/wiki-shared";
+import { titleFromSlug, type EditEntry, type IndexData, type Page, type PageResponse, type PageSummary, type SearchResponse } from "@openindex/wiki-shared";
 import { resolveContent, type ContentFlags } from "../content";
 import { getClient, requireAuth } from "../context";
 import { UsageError, fail, print, table, truncate, cents } from "../output";
@@ -25,15 +25,20 @@ export function pagesTable(pages: PageSummary[]): string {
   );
 }
 
-function pageText(page: Page, backlinks: PageSummary[]): string {
+function pageText(r: PageResponse): string {
+  const { page, backlinks, backlinkCount, linkTargets } = r;
   const lines = [`# ${page.title}`, `${page.url}  ·  by ${page.ownerName}  ·  v${page.version}  ·  updated ${page.updatedAt.slice(0, 10)}`];
   if (page.tags.length) lines.push(`tags: ${page.tags.map((t) => "#" + t).join(" ")}`);
   if (page.rent.active > 0) lines.push(`rent: ${cents(page.rent.active)}/day (${page.rent.status})`);
   lines.push("");
   if (page.markdown) lines.push(page.markdown.trim(), "");
   if (page.json !== null && page.json !== undefined) lines.push("```json", JSON.stringify(page.json, null, 2), "```", "");
-  if (page.links.length) lines.push(`links: ${page.links.join(", ")}`);
-  lines.push(`backlinks (${backlinks.length}): ${backlinks.map((b) => b.slug).join(", ") || "none"}`);
+  const targets = new Map(linkTargets.map((t) => [t.slug, t]));
+  const existing = page.links.filter((l) => targets.get(l)?.exists !== false);
+  const missing = linkTargets.filter((t) => !t.exists).map((t) => t.slug);
+  if (existing.length) lines.push(`links (${existing.length}): ${existing.map((l) => `${targets.get(l)?.title ?? titleFromSlug(l)} (${l})`).join(", ")}`);
+  if (missing.length) lines.push(`missing links (${missing.length}, pages not written yet): ${missing.join(", ")}`);
+  lines.push(`backlinks (${backlinkCount}): ${backlinks.map((b) => `${b.title} (${b.slug})`).join(", ") || "none"}`);
   return lines.join("\n");
 }
 
@@ -73,7 +78,7 @@ export function registerPageCommands(program: Command) {
         }
         const res = await client.getPage(slug);
         if (opts.format === "json") print(res, (r: typeof res) => JSON.stringify(r, null, 2));
-        else print(res, (r: typeof res) => pageText(r.page, r.backlinks));
+        else print(res, (r: typeof res) => pageText(r));
       } catch (err) {
         fail(err);
       }
@@ -137,14 +142,38 @@ export function registerPageCommands(program: Command) {
     .description("List pages")
     .option("-o, --owner <uid>", "owner uid, or 'me'")
     .option("-t, --tag <tag>", "filter by hashtag")
-    .option("-s, --sort <sort>", "recent | rent", "recent")
+    .option("-s, --sort <sort>", "recent | rent | alpha", "recent")
+    .option("--from <prefix>", "alpha sort: start at this letter, prefix or slug")
     .option("-l, --limit <n>", "max results", "20")
     .option("--cursor <cursor>", "pagination cursor from a previous call")
-    .action(async (opts: { owner?: string; tag?: string; sort: "recent" | "rent"; limit: string; cursor?: string }) => {
+    .action(async (opts: { owner?: string; tag?: string; sort: "recent" | "rent" | "alpha"; from?: string; limit: string; cursor?: string }) => {
       try {
         const client = opts.owner === "me" ? requireAuth() : getClient();
-        const res = await client.listPages({ owner: opts.owner, tag: opts.tag, sort: opts.sort, limit: Number(opts.limit), cursor: opts.cursor });
+        const res = await client.listPages({ owner: opts.owner, tag: opts.tag, sort: opts.sort, from: opts.from, limit: Number(opts.limit), cursor: opts.cursor });
         print(res, (r: typeof res) => pagesTable(r.pages) + (r.nextCursor ? `\nnext: --cursor ${r.nextCursor}` : ""));
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+  program
+    .command("index")
+    .description("Wiki overview: categories, hubs (most linked), wanted pages (linked but missing), top tags, recent pages")
+    .action(async () => {
+      try {
+        const res = await getClient().index();
+        print(res, (r: IndexData) => {
+          const out: string[] = [`${r.totalPages} pages`, "", "Categories:"];
+          out.push(r.categories.length ? table(r.categories.map((c) => [c.slug, truncate(c.title, 40), truncate(c.summary, 60)])) : "  (none yet: tag a page #category)");
+          out.push("", "Hubs (most linked):");
+          out.push(r.hubs.length ? table(r.hubs.map((h) => [h.slug, truncate(h.title, 40), `${h.backlinkCount} backlinks`])) : "  (none)");
+          out.push("", "Wanted pages (linked but not written yet):");
+          out.push(r.wanted.length ? table(r.wanted.map((w) => [w.slug, w.suggestedTitle, `wanted by ${w.count}`])) : "  (none)");
+          out.push("", `Top tags: ${r.tags.map((t) => `#${t.tag} (${t.pageCount})`).join(" ") || "(none)"}`);
+          out.push("", "Recent:");
+          out.push(pagesTable(r.recent));
+          return out.join("\n");
+        });
       } catch (err) {
         fail(err);
       }
