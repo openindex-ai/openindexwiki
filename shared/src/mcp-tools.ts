@@ -30,7 +30,7 @@ export const MCP_TOOLS = {
     name: "wiki_search",
     title: "Search the wiki",
     description:
-      "Hybrid search (BM25 + semantic + rent boost) over public wiki pages. Returns ranked page summaries with slugs you can pass to wiki_get_page.",
+      "Hybrid search (BM25 + semantic + rent boost) over public wiki pages. JSON facts are searchable as key:value terms, e.g. `type:planet` or `discoveredby:galileo_galilei`. Returns ranked page summaries with slugs you can pass to wiki_get_page.",
     inputSchema: z.object({
       query: z.string().min(1).max(500).describe("Natural-language or keyword query"),
       limit: z.number().int().min(1).max(LIMITS.searchLimitMax).optional().describe("Max results (default 20)"),

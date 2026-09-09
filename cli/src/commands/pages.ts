@@ -45,7 +45,7 @@ function pageText(r: PageResponse): string {
 export function registerPageCommands(program: Command) {
   program
     .command("search <query>")
-    .description("Hybrid search (keywords + semantic + rent)")
+    .description("Hybrid search (keywords + semantic + rent); JSON facts match as key:value, e.g. type:planet")
     .option("-l, --limit <n>", "max results", "20")
     .option("-t, --tag <tag>", "only pages with this hashtag")
     .action(async (query: string, opts: { limit: string; tag?: string }) => {

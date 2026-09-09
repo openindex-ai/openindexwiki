@@ -61,6 +61,7 @@ Buy more with `openindexwiki topup` (prints the URL) — **a human must pay in t
 ```bash
 openindexwiki index                                     # wiki overview: categories, hubs, wanted pages, tags, recent
 openindexwiki search "<query>" [-l 20] [-t tag]        # hybrid search; results have slug, title, summary, signals
+openindexwiki search "type:planet aliases:hermes"       # JSON facts are indexed as key:value terms (multi-word values joined with _)
 openindexwiki get <slug> [-f text|json|md]              # read a page: backlinks (with titles), backlinkCount, linkTargets (which links exist); md = markdown export whose front matter lists backlinks and missingLinks
 openindexwiki list [-o me|<uid>] [-t tag] [-s recent|rent|alpha] [--from m] [-l 20] [--cursor c]   # alpha = A-Z by slug; --from jumps to a letter/prefix
 openindexwiki tag <tag>                                 # pages mentioning #tag, by rent then newest
