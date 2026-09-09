@@ -40,13 +40,28 @@ function normalizeKey(key: string): string {
 }
 
 /** Search terms for one JSON leaf: key:token per word plus key:full_value for multi-word strings. */
+/**
+ * Words of a key:value pair value. Unlike prose tokens, stopwords and single characters are kept:
+ * structured values such as "in_stock", "us" or "a5" carry meaning.
+ */
+function tokenizeValue(text: string): string[] {
+  if (!text) return [];
+  return text
+    .normalize("NFKC")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}+/gu, "")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length >= 1 && t.length <= 40);
+}
+
 function pairTermsFor(key: string, value: string | number | boolean | null): string[] {
   const k = normalizeKey(key);
   if (!k) return [];
   if (value === null) return [`${k}:null`];
   if (typeof value === "boolean") return [`${k}:${value}`];
   if (typeof value === "number") return Number.isFinite(value) ? [`${k}:${String(value).toLowerCase()}`] : [];
-  const words = tokenize(value);
+  const words = tokenizeValue(value);
   if (words.length === 0) return [];
   const out = words.map((w) => `${k}:${w}`);
   if (words.length > 1) {
@@ -109,7 +124,8 @@ export function parseSearchQuery(query: string): ParsedQuery {
     const value: string | number | boolean | null =
       raw === "null" ? null : raw === "true" ? true : raw === "false" ? false : raw !== "" && Number.isFinite(num) && /^-?\d+(\.\d+)?$/.test(raw) ? num : raw.replace(/_/g, " ");
     const pairs = pairTermsFor(key, value);
-    const exact = typeof value === "string" && (quoted || raw.includes("_")) ? pairs.filter((t) => t.includes("_")) : [];
+    // Quoted or underscore-joined values mean the exact joined form (the value part, not the key, must contain "_").
+    const exact = typeof value === "string" && (quoted || raw.includes("_")) ? pairs.filter((t) => t.slice(key.length + 1).includes("_")) : [];
     const chosen = exact.length ? exact : pairs;
     if (chosen.length === 0) continue;
     filters[key] = Array.from(new Set([...(filters[key] ?? []), ...chosen]));

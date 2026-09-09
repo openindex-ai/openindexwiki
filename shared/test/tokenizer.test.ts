@@ -87,3 +87,24 @@ describe("parseSearchQuery + matchesFilters", () => {
     expect(matchesFilters(undefined, {})).toBe(true);
   });
 });
+
+describe("structured values keep stopwords and short tokens", () => {
+  it("indexes in_stock, country codes and sizes", () => {
+    expect(jsonPairTerms({ availability: "in_stock", ships_to: ["us", "eu"], size: "A5", category: "home_and_garden" })).toEqual([
+      "availability:in",
+      "availability:stock",
+      "availability:in_stock",
+      "ships_to:us",
+      "ships_to:eu",
+      "size:a5",
+      "category:home",
+      "category:and",
+      "category:garden",
+      "category:home_and_garden",
+    ]);
+  });
+  it("parses the same terms on the query side", () => {
+    expect(parseSearchQuery("availability:in_stock ships_to:us").filters).toEqual({ availability: ["availability:in_stock"], ships_to: ["ships_to:us"] });
+    expect(parseSearchQuery("price_band:10_25 price_band:under_10").filters).toEqual({ price_band: ["price_band:10_25", "price_band:under_10"] });
+  });
+});
