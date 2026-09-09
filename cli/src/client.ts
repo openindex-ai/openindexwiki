@@ -163,7 +163,7 @@ export class WikiClient {
   history(slug: string) {
     return this.request<{ slug: string; edits: EditEntry[] }>("GET", `/api/pages/${encodeURIComponent(slug)}/edits`);
   }
-  search(q: string, opts: { limit?: number; tag?: string } = {}) {
+  search(q: string, opts: { limit?: number; tag?: string; linksTo?: string } = {}) {
     return this.request<SearchResponse>("GET", "/api/search", { query: { q, ...opts } });
   }
   tags(limit?: number) {

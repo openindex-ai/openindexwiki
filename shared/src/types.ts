@@ -128,6 +128,12 @@ export interface SearchResult extends PageSummary {
 
 export interface SearchResponse {
   query: string;
+  /** free-text words that drove ranking */
+  words: string[];
+  /** key:value filters that were required (OR within a key, AND across keys) */
+  filters: Record<string, string[]>;
+  /** when set, results were restricted to pages linking to this slug */
+  linksTo?: string;
   took: number;
   results: SearchResult[];
 }

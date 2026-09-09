@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tokenize, bm25Metrics, jsonPairTerms, tokenizeQuery } from "../src/tokenizer";
+import { tokenize, bm25Metrics, jsonPairTerms, tokenizeQuery, parseSearchQuery, matchesFilters } from "../src/tokenizer";
 import { summarize, flattenJsonValues } from "../src/text";
 
 describe("tokenize", () => {
@@ -62,8 +62,28 @@ describe("json key:value terms", () => {
   });
   it("tokenizes queries with key:value pairs", () => {
     expect(tokenizeQuery("planets type:planet")).toEqual(["planets", "type:planet"]);
-    expect(tokenizeQuery('discoveredBy:"Galileo Galilei"')).toEqual(["discoveredby:galileo", "discoveredby:galilei", "discoveredby:galileo_galilei"]);
+    expect(tokenizeQuery('discoveredBy:"Galileo Galilei"')).toEqual(["discoveredby:galileo_galilei"]); // quoted = exact joined form
     expect(tokenizeQuery("discoveredby:galileo_galilei")).toEqual(["discoveredby:galileo_galilei"]);
     expect(tokenizeQuery("Type:Planet habitable:false n:87.97")).toEqual(["type:planet", "habitable:false", "n:87.97"]);
+  });
+});
+
+describe("parseSearchQuery + matchesFilters", () => {
+  it("separates text from grouped filters", () => {
+    expect(parseSearchQuery("orbital resonance type:planet Type:moon habitable:false")).toEqual({
+      text: "orbital resonance",
+      words: ["orbital", "resonance"],
+      filters: { type: ["type:planet", "type:moon"], habitable: ["habitable:false"] },
+    });
+  });
+  it("uses the exact joined form for quoted or underscored values", () => {
+    expect(parseSearchQuery('discoveredBy:"Galileo Galilei"').filters).toEqual({ discoveredby: ["discoveredby:galileo_galilei"] });
+    expect(parseSearchQuery("discoveredby:galileo").filters).toEqual({ discoveredby: ["discoveredby:galileo"] });
+  });
+  it("matches OR within a key and AND across keys", () => {
+    const filters = { type: ["type:planet", "type:moon"], habitable: ["habitable:false"] };
+    expect(matchesFilters({ "type:moon": 1, "habitable:false": 1 }, filters)).toBe(true);
+    expect(matchesFilters({ "type:planet": 1 }, filters)).toBe(false);
+    expect(matchesFilters(undefined, {})).toBe(true);
   });
 });

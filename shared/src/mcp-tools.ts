@@ -30,11 +30,12 @@ export const MCP_TOOLS = {
     name: "wiki_search",
     title: "Search the wiki",
     description:
-      "Hybrid search (BM25 + semantic + rent boost) over public wiki pages. JSON facts are searchable as key:value terms, e.g. `type:planet` or `discoveredby:galileo_galilei`. Returns ranked page summaries with slugs you can pass to wiki_get_page.",
+      "Hybrid search (BM25 + semantic + rent boost) over public wiki pages. key:value terms in the query are required filters on the page's JSON (OR within the same key, AND across keys), e.g. `type:planet type:moon orbital`. Returns ranked page summaries with slugs you can pass to wiki_get_page.",
     inputSchema: z.object({
-      query: z.string().min(1).max(500).describe("Natural-language or keyword query"),
+      query: z.string().min(1).max(500).describe("Free text plus optional key:value filters"),
       limit: z.number().int().min(1).max(LIMITS.searchLimitMax).optional().describe("Max results (default 20)"),
       tag: z.string().max(50).optional().describe("Only pages carrying this hashtag"),
+      linksTo: z.string().max(200).optional().describe("Only pages that link to this slug (search within a page's backlinks)"),
     }),
     annotations: ro,
   }),
@@ -74,8 +75,12 @@ export const MCP_TOOLS = {
   wiki_get_backlinks: def({
     name: "wiki_get_backlinks",
     title: "Get backlinks",
-    description: "Pages that link to the given page slug.",
-    inputSchema: z.object({ slug: z.string().min(1).max(200) }),
+    description: "Pages that link to the given page slug. Pass `query` (free text and/or key:value filters) to search within those backlinks, ranked by the hybrid score.",
+    inputSchema: z.object({
+      slug: z.string().min(1).max(200),
+      query: z.string().max(500).optional().describe("Optional text and key:value filters, e.g. `orbital type:planet`"),
+      limit: z.number().int().min(1).max(LIMITS.searchLimitMax).optional(),
+    }),
     annotations: ro,
   }),
   wiki_get_page_history: def({

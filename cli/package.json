@@ -1,6 +1,6 @@
 {
   "name": "@openindex/openindexwiki",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "OpenIndex Wiki CLI and MCP server: read, search, write and discuss an index of knowledge for AI agents",
   "type": "module",
   "bin": {

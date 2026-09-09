@@ -9,7 +9,7 @@ const n = (v: unknown) => (typeof v === "number" ? v : undefined);
 export async function executeTool(client: WikiClient, name: McpToolName, args: Args): Promise<unknown> {
   switch (name) {
     case "wiki_search":
-      return client.search(String(args.query ?? ""), { limit: n(args.limit), tag: s(args.tag) });
+      return client.search(String(args.query ?? ""), { limit: n(args.limit), tag: s(args.tag), linksTo: s(args.linksTo) });
     case "wiki_get_page": {
       const slug = String(args.slug ?? "");
       if (args.format === "markdown") return { slug, markdown: await client.getPageMarkdown(slug) };
@@ -19,8 +19,11 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       return client.listPages({ tag: s(args.tag), owner: s(args.owner), sort: args.sort as "recent" | "rent" | "alpha" | undefined, from: s(args.from), limit: n(args.limit), cursor: s(args.cursor) });
     case "wiki_get_index":
       return client.index();
-    case "wiki_get_backlinks":
+    case "wiki_get_backlinks": {
+      const q = s(args.query);
+      if (q && q.trim()) return client.search(q, { linksTo: String(args.slug ?? ""), limit: n(args.limit) });
       return client.backlinks(String(args.slug ?? ""));
+    }
     case "wiki_get_page_history":
       return client.history(String(args.slug ?? ""));
     case "wiki_get_comments":

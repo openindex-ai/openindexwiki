@@ -82,23 +82,53 @@ export function jsonPairTerms(json: JsonValue | null | undefined): string[] {
 
 const QUERY_PAIR_RE = /([\p{L}\p{N}_.-]+):("[^"]+"|[\p{L}\p{N}_.-]+)/gu;
 
-/** Query tokens: the usual words plus any key:value pairs written in the query (e.g. type:planet). */
-export function tokenizeQuery(query: string): string[] {
-  // Plain words come from the query with the key:value expressions removed, so "type:planet"
-  // contributes only the pair term (not the noise words "type" and "planet").
-  const terms = new Set(tokenize(query.replace(QUERY_PAIR_RE, " ")));
+export interface ParsedQuery {
+  /** free-text part of the query (key:value expressions removed) */
+  text: string;
+  /** plain word tokens of `text` */
+  words: string[];
+  /** key -> pair terms; a page must match at least one term of every key (OR within a key, AND across keys) */
+  filters: Record<string, string[]>;
+}
+
+/**
+ * Split a query into free text and key:value filters. `type:planet type:moon orbital` ->
+ * { text: "orbital", words: ["orbital"], filters: { type: ["type:planet", "type:moon"] } }.
+ * Quoted or underscore-joined multi-word values match the exact joined form only.
+ */
+export function parseSearchQuery(query: string): ParsedQuery {
+  const text = query.replace(QUERY_PAIR_RE, " ").replace(/\s+/g, " ").trim();
+  const words = Array.from(new Set(tokenize(text)));
+  const filters: Record<string, string[]> = {};
   for (const m of query.matchAll(QUERY_PAIR_RE)) {
-    const key = m[1];
+    const key = normalizeKey(m[1]);
+    if (!key) continue;
+    const quoted = m[2].startsWith('"');
     const raw = m[2].replace(/^"|"$/g, "");
     const num = Number(raw);
     const value: string | number | boolean | null =
       raw === "null" ? null : raw === "true" ? true : raw === "false" ? false : raw !== "" && Number.isFinite(num) && /^-?\d+(\.\d+)?$/.test(raw) ? num : raw.replace(/_/g, " ");
     const pairs = pairTermsFor(key, value);
-    // A multi-word value written with underscores means the exact joined form; keep only that one.
-    const exact = typeof value === "string" && raw.includes("_") ? pairs.filter((t) => t.includes("_")) : pairs;
-    for (const t of exact.length ? exact : pairs) terms.add(t);
+    const exact = typeof value === "string" && (quoted || raw.includes("_")) ? pairs.filter((t) => t.includes("_")) : [];
+    const chosen = exact.length ? exact : pairs;
+    if (chosen.length === 0) continue;
+    filters[key] = Array.from(new Set([...(filters[key] ?? []), ...chosen]));
   }
-  return Array.from(terms);
+  return { text, words, filters };
+}
+
+/** True when the term-frequency map satisfies every filter group (OR within a key, AND across keys). */
+export function matchesFilters(tf: Record<string, number> | undefined, filters: Record<string, string[]>): boolean {
+  for (const terms of Object.values(filters)) {
+    if (!terms.some((t) => (tf?.[t] ?? 0) > 0)) return false;
+  }
+  return true;
+}
+
+/** Query tokens: the plain words plus every key:value pair term (used for candidate retrieval and IDF lookups). */
+export function tokenizeQuery(query: string): string[] {
+  const { words, filters } = parseSearchQuery(query);
+  return Array.from(new Set([...words, ...Object.values(filters).flat()]));
 }
 
 export interface Bm25Metrics {

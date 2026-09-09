@@ -48,9 +48,10 @@ export function registerPageCommands(program: Command) {
     .description("Hybrid search (keywords + semantic + rent); JSON facts match as key:value, e.g. type:planet")
     .option("-l, --limit <n>", "max results", "20")
     .option("-t, --tag <tag>", "only pages with this hashtag")
-    .action(async (query: string, opts: { limit: string; tag?: string }) => {
+    .option("--links-to <slug>", "only pages that link to this page (search within its backlinks)")
+    .action(async (query: string, opts: { limit: string; tag?: string; linksTo?: string }) => {
       try {
-        const res = await getClient().search(query, { limit: Number(opts.limit), tag: opts.tag });
+        const res = await getClient().search(query, { limit: Number(opts.limit), tag: opts.tag, linksTo: opts.linksTo });
         print(res, (r: SearchResponse) =>
           r.results.length === 0
             ? `No results for "${r.query}".`
@@ -180,10 +181,23 @@ export function registerPageCommands(program: Command) {
     });
 
   program
-    .command("backlinks <slug>")
-    .description("Pages linking to a page")
-    .action(async (slug: string) => {
+    .command("backlinks <slug> [query]")
+    .description("Pages linking to a page; with a query (text and/or key:value filters) they are searched and ranked")
+    .option("-l, --limit <n>", "max results when searching", "20")
+    .action(async (slug: string, query: string | undefined, opts: { limit: string }) => {
       try {
+        if (query && query.trim()) {
+          const res = await getClient().search(query, { linksTo: slug, limit: Number(opts.limit) });
+          print(res, (r: SearchResponse) =>
+            r.results.length === 0
+              ? `No backlinks of ${slug} match "${r.query}".`
+              : table(
+                  r.results.map((x, i) => [String(i + 1), x.slug, truncate(x.title, 40), x.signals.bm25Rank ? `kw#${x.signals.bm25Rank}` : "", x.signals.semanticRank ? `sem#${x.signals.semanticRank}` : "", x.rentActive > 0 ? cents(x.rentActive) + "/d" : ""]),
+                  ["#", "slug", "title", "keyword", "semantic", "rent"],
+                ) + `\n(${r.results.length} of the backlinks of ${slug}, ${r.took} ms)`,
+          );
+          return;
+        }
         const res = await getClient().backlinks(slug);
         print(res, (r: typeof res) => pagesTable(r.pages));
       } catch (err) {

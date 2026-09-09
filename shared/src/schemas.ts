@@ -88,5 +88,12 @@ export const searchQuerySchema = z.object({
   q: z.string().trim().min(1).max(500),
   limit: z.coerce.number().int().min(1).max(LIMITS.searchLimitMax).default(LIMITS.searchLimitDefault),
   tag: z.string().trim().max(50).optional(),
+  /** restrict results to pages that link to this slug */
+  linksTo: z.string().trim().max(200).optional(),
+});
+
+export const backlinksQuerySchema = z.object({
+  q: z.string().trim().max(500).optional(),
+  limit: z.coerce.number().int().min(1).max(LIMITS.searchLimitMax).default(LIMITS.searchLimitDefault),
 });
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
