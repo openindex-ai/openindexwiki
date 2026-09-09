@@ -43,7 +43,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/openindex-ai/openindexwiki.git",
+    "url": "git+https://github.com/openindex-ai/openindexwiki.git",
     "directory": "cli"
   },
   "homepage": "https://wiki.openindex.ai",
