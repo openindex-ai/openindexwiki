@@ -1,4 +1,5 @@
 /** Wire types (JSON over HTTP). Timestamps are ISO-8601 strings. */
+import type { InviteStatus, MemberRole, PageRole, PageVisibility } from "./access";
 
 export type PageStatus = "active" | "deleted";
 export type RentStatus = "none" | "active" | "failed";
@@ -29,6 +30,8 @@ export interface PageSummary {
   ownerName: string;
   rentActive: number;
   commentCount: number;
+  /** private pages are only readable by the owner and members and are not indexed */
+  visibility: PageVisibility;
   createdAt: string;
   updatedAt: string;
 }
@@ -48,10 +51,11 @@ export interface EditEntry {
   editorId: string;
   editorName: string;
   kind: "create" | "edit" | "delete" | "recreate";
-  changed: { title: boolean; markdown: boolean; json: boolean };
+  changed: { title: boolean; markdown: boolean; json: boolean; visibility?: boolean };
   title: string;
   markdown: string | null;
   json: JsonValue | null;
+  visibility?: PageVisibility;
   createdAt: string;
 }
 
@@ -202,6 +206,61 @@ export interface IndexData {
   tags: TagInfo[];
   recent: PageSummary[];
   totalPages: number;
+}
+
+export interface PageMember {
+  uid: string;
+  displayName: string;
+  photoURL: string | null;
+  role: PageRole;
+}
+
+/** A pending (or recently settled) email invite to a page. */
+export interface PageInvite {
+  id: string;
+  email: string;
+  role: MemberRole;
+  status: InviteStatus;
+  invitedBy: string;
+  invitedByName: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface MembersResponse {
+  slug: string;
+  visibility: PageVisibility;
+  viewerRole: PageRole | null;
+  owner: PageMember;
+  members: PageMember[];
+  /** only present for the owner and admins (invite emails are private) */
+  invites?: PageInvite[];
+}
+
+export type InviteResult =
+  | { status: "added"; member: PageMember; updated: boolean; emailSent: boolean }
+  | { status: "invited"; invite: PageInvite; emailSent: boolean };
+
+/** What the /invite/{token} page shows before the invitee signs in. */
+export interface InvitePreview {
+  id: string;
+  pageSlug: string;
+  pageTitle: string;
+  pageUrl: string;
+  role: MemberRole;
+  invitedByName: string;
+  /** masked, e.g. t***@example.com */
+  emailHint: string;
+  status: InviteStatus;
+  expiresAt: string;
+}
+
+/** Result of accepting an invite. */
+export interface AcceptedInvite {
+  slug: string;
+  pageTitle: string;
+  url: string;
+  role: PageRole;
 }
 
 export interface PageResponse {

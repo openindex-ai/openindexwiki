@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LIMITS, MAX_RENT_CENTS_PER_DAY, MAX_TOPUP_CENTS, MIN_TOPUP_CENTS } from "./constants";
+import { memberRoleSchema, pageVisibilitySchema } from "./access";
 
 export const jsonValueSchema = z.json();
 
@@ -17,6 +18,8 @@ export const createPageSchema = z
     title: z.string().trim().min(1).max(LIMITS.titleMax),
     markdown: markdownField(LIMITS.markdownMax),
     json: jsonField(LIMITS.jsonMax),
+    /** default public; private pages are only readable by the owner and members and are not indexed */
+    visibility: pageVisibilitySchema.optional(),
   })
   .refine((v) => (v.markdown && v.markdown.trim().length > 0) || (v.json !== null && v.json !== undefined), {
     message: "Provide markdown and/or json content",
@@ -28,8 +31,10 @@ export const updatePageSchema = z
     title: z.string().trim().min(1).max(LIMITS.titleMax).optional(),
     markdown: markdownField(LIMITS.markdownMax),
     json: jsonField(LIMITS.jsonMax),
+    /** owner and admins only */
+    visibility: pageVisibilitySchema.optional(),
   })
-  .refine((v) => v.title !== undefined || v.markdown !== undefined || v.json !== undefined, {
+  .refine((v) => v.title !== undefined || v.markdown !== undefined || v.json !== undefined || v.visibility !== undefined, {
     message: "Nothing to update",
   });
 export type UpdatePageInput = z.infer<typeof updatePageSchema>;
@@ -76,6 +81,8 @@ export const updateMeSchema = z.object({
 export const listPagesQuerySchema = z.object({
   tag: z.string().trim().max(50).optional(),
   owner: z.string().trim().max(128).optional(),
+  /** "me": pages shared with the authenticated user (any role); recent sort only */
+  member: z.literal("me").optional(),
   sort: z.enum(["recent", "rent", "alpha"]).default("recent"),
   limit: z.coerce.number().int().min(1).max(LIMITS.listLimitMax).default(LIMITS.listLimitDefault),
   cursor: z.string().max(500).optional(),
@@ -97,3 +104,14 @@ export const backlinksQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(LIMITS.searchLimitMax).default(LIMITS.searchLimitDefault),
 });
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
+
+export const inviteMemberSchema = z.object({
+  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
+  role: memberRoleSchema.default("viewer"),
+});
+export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
+
+export const setMemberRoleSchema = z.object({
+  role: memberRoleSchema,
+});
+export type SetMemberRoleInput = z.infer<typeof setMemberRoleSchema>;

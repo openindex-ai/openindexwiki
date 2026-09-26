@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { CLI_BIN } from "@openindex/wiki-shared";
 import { registerAuthCommands } from "./commands/auth";
 import { registerCommentCommands } from "./commands/comments";
+import { registerMemberCommands } from "./commands/members";
 import { registerMiscCommands } from "./commands/misc";
 import { registerPageCommands } from "./commands/pages";
 import { initContext, type GlobalOpts } from "./context";
@@ -27,6 +28,7 @@ program
 registerAuthCommands(program);
 registerPageCommands(program);
 registerCommentCommands(program);
+registerMemberCommands(program);
 registerMiscCommands(program);
 
 program.parseAsync(process.argv).catch(fail);

@@ -14,14 +14,14 @@ function contentOptions(cmd: Command): Command {
 }
 
 export function pageLine(p: PageSummary): string[] {
-  return [p.slug, truncate(p.title, 40), p.rentActive > 0 ? cents(p.rentActive) + "/d" : "", String(p.commentCount), p.ownerName, p.updatedAt.slice(0, 10)];
+  return [p.slug, truncate(p.title, 40), p.rentActive > 0 ? cents(p.rentActive) + "/d" : "", String(p.commentCount), p.ownerName, p.updatedAt.slice(0, 10), p.visibility === "private" ? "private" : ""];
 }
 
 export function pagesTable(pages: PageSummary[]): string {
   if (pages.length === 0) return "(no pages)";
   return table(
     pages.map(pageLine),
-    ["slug", "title", "rent", "comments", "owner", "updated"],
+    ["slug", "title", "rent", "comments", "owner", "updated", "access"],
   );
 }
 
@@ -29,6 +29,7 @@ function pageText(r: PageResponse): string {
   const { page, backlinks, backlinkCount, linkTargets } = r;
   const lines = [`# ${page.title}`, `${page.url}  ·  by ${page.ownerName}  ·  v${page.version}  ·  updated ${page.updatedAt.slice(0, 10)}`];
   if (page.tags.length) lines.push(`tags: ${page.tags.map((t) => "#" + t).join(" ")}`);
+  if (page.visibility === "private") lines.push("visibility: private (only the owner and members can read this page)");
   if (page.rent.active > 0) lines.push(`rent: ${cents(page.rent.active)}/day (${page.rent.status})`);
   lines.push("");
   if (page.markdown) lines.push(page.markdown.trim(), "");
@@ -85,20 +86,33 @@ export function registerPageCommands(program: Command) {
       }
     });
 
-  contentOptions(program.command("create").description("Create a page (costs credits)").requiredOption("-t, --title <title>", "page title")).action(
-    async (opts: { title: string } & ContentFlags) => {
+  contentOptions(
+    program
+      .command("create")
+      .description("Create a page (costs credits)")
+      .requiredOption("-t, --title <title>", "page title")
+      .option("--private", "only you and the accounts you share it with can read it (not searchable, no rent)"),
+  ).action(
+    async (opts: { title: string; private?: boolean } & ContentFlags) => {
       try {
         const content = await resolveContent(opts);
-        const { page } = await requireAuth().createPage({ title: opts.title, markdown: content.markdown, json: content.json });
-        print(page, (p: Page) => `Created ${p.url} (v${p.version})`);
+        const { page } = await requireAuth().createPage({ title: opts.title, markdown: content.markdown, json: content.json, visibility: opts.private ? "private" : undefined });
+        print(page, (p: Page) => `Created ${p.url} (v${p.version}${p.visibility === "private" ? ", private" : ""})`);
       } catch (err) {
         fail(err);
       }
     },
   );
 
-  contentOptions(program.command("edit <slug>").description("Edit a page you own (free)").option("-t, --title <title>", "new title").option("--clear-data", "remove the JSON content")).action(
-    async (slug: string, opts: { title?: string; clearData?: boolean } & ContentFlags) => {
+  contentOptions(
+    program
+      .command("edit <slug>")
+      .description("Edit a page you own or are an editor/admin of (free)")
+      .option("-t, --title <title>", "new title")
+      .option("--clear-data", "remove the JSON content")
+      .option("--visibility <public|private>", "change who can read the page (owner/admin only)"),
+  ).action(
+    async (slug: string, opts: { title?: string; clearData?: boolean; visibility?: string } & ContentFlags) => {
       try {
         const content = await resolveContent(opts);
         const patch: Record<string, unknown> = {};
@@ -106,7 +120,11 @@ export function registerPageCommands(program: Command) {
         if (content.markdown !== undefined) patch.markdown = content.markdown;
         if (content.json !== undefined) patch.json = content.json;
         if (opts.clearData) patch.json = null;
-        if (Object.keys(patch).length === 0) throw new UsageError("Nothing to change: pass --title, --markdown/--markdown-file/--stdin, --data/--data-file or --clear-data");
+        if (opts.visibility !== undefined) {
+          if (opts.visibility !== "public" && opts.visibility !== "private") throw new UsageError("--visibility must be public or private");
+          patch.visibility = opts.visibility;
+        }
+        if (Object.keys(patch).length === 0) throw new UsageError("Nothing to change: pass --title, --markdown/--markdown-file/--stdin, --data/--data-file, --clear-data or --visibility");
         const { page } = await requireAuth().updatePage(slug, patch);
         print(page, (p: Page) => `Updated ${p.url} (v${p.version})`);
       } catch (err) {
@@ -141,16 +159,18 @@ export function registerPageCommands(program: Command) {
   program
     .command("list")
     .description("List pages")
-    .option("-o, --owner <uid>", "owner uid, or 'me'")
+    .option("-o, --owner <uid>", "owner uid, or 'me' (includes your private pages)")
+    .option("--shared", "pages shared with you (any role); requires login")
     .option("-t, --tag <tag>", "filter by hashtag")
     .option("-s, --sort <sort>", "recent | rent | alpha", "recent")
     .option("--from <prefix>", "alpha sort: start at this letter, prefix or slug")
     .option("-l, --limit <n>", "max results", "20")
     .option("--cursor <cursor>", "pagination cursor from a previous call")
-    .action(async (opts: { owner?: string; tag?: string; sort: "recent" | "rent" | "alpha"; from?: string; limit: string; cursor?: string }) => {
+    .action(async (opts: { owner?: string; shared?: boolean; tag?: string; sort: "recent" | "rent" | "alpha"; from?: string; limit: string; cursor?: string }) => {
       try {
-        const client = opts.owner === "me" ? requireAuth() : getClient();
-        const res = await client.listPages({ owner: opts.owner, tag: opts.tag, sort: opts.sort, from: opts.from, limit: Number(opts.limit), cursor: opts.cursor });
+        if (opts.shared && (opts.owner || opts.tag || opts.sort !== "recent")) throw new UsageError("--shared cannot be combined with --owner, --tag or --sort");
+        const client = opts.owner === "me" || opts.shared ? requireAuth() : getClient();
+        const res = await client.listPages({ owner: opts.owner, member: opts.shared ? "me" : undefined, tag: opts.tag, sort: opts.sort, from: opts.from, limit: Number(opts.limit), cursor: opts.cursor });
         print(res, (r: typeof res) => pagesTable(r.pages) + (r.nextCursor ? `\nnext: --cursor ${r.nextCursor}` : ""));
       } catch (err) {
         fail(err);

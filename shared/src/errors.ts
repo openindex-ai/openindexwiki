@@ -1,6 +1,7 @@
 export type ErrorCode =
   | "UNAUTHORIZED"
   | "FORBIDDEN"
+  | "PAGE_PRIVATE"
   | "NOT_FOUND"
   | "VALIDATION"
   | "PAYLOAD_TOO_LARGE"
@@ -45,6 +46,7 @@ export function exitCodeFor(code: string | undefined, status?: number): number {
     case "UNAUTHORIZED":
       return EXIT_CODES.auth;
     case "FORBIDDEN":
+    case "PAGE_PRIVATE":
       return EXIT_CODES.forbidden;
     case "NOT_FOUND":
       return EXIT_CODES.notFound;

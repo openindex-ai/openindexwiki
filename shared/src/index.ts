@@ -1,5 +1,6 @@
 export * from "./constants";
 export * from "./errors";
+export * from "./access";
 export * from "./types";
 export * from "./slug";
 export * from "./links";

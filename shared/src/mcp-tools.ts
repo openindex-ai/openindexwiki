@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { LIMITS, MAX_RENT_CENTS_PER_DAY, MAX_TOPUP_CENTS, MIN_TOPUP_CENTS } from "./constants";
 import { jsonValueSchema } from "./schemas";
+import { memberRoleSchema, pageVisibilitySchema } from "./access";
 
 export interface ToolAnnotations {
   readOnlyHint?: boolean;
@@ -42,7 +43,7 @@ export const MCP_TOOLS = {
   wiki_get_page: def({
     name: "wiki_get_page",
     title: "Get a page",
-    description: "Read a wiki page by slug: title, markdown, json, tags, links, backlinks, rent and owner.",
+    description: "Read a wiki page by slug: title, markdown, json, tags, links, backlinks, rent, owner and visibility. Private pages are only readable by their owner and members (403 PAGE_PRIVATE otherwise).",
     inputSchema: z.object({
       slug: z.string().min(1).max(200),
       format: z.enum(["json", "markdown"]).optional().describe("'markdown' returns the page as a markdown document with front matter"),
@@ -53,10 +54,11 @@ export const MCP_TOOLS = {
     name: "wiki_list_pages",
     title: "List pages",
     description:
-      "List pages, optionally filtered by tag or owner uid, sorted by 'recent' (default), 'rent', or 'alpha' (A-Z by slug; combine with `from` to jump to a letter or prefix; alpha cannot be combined with tag/owner).",
+      "List pages, optionally filtered by tag or owner uid, sorted by 'recent' (default), 'rent', or 'alpha' (A-Z by slug; combine with `from` to jump to a letter or prefix; alpha cannot be combined with tag/owner). Public pages only, except owner='me' (includes your private pages) and shared=true (pages shared with you).",
     inputSchema: z.object({
       tag: z.string().max(50).optional(),
       owner: z.string().max(128).optional().describe("Owner uid, or 'me'"),
+      shared: z.boolean().optional().describe("true: only pages shared with you (any role); recent sort only"),
       sort: z.enum(["recent", "rent", "alpha"]).optional(),
       from: z.string().max(200).optional().describe("alpha sort only: start at this slug or prefix"),
       limit: z.number().int().min(1).max(LIMITS.listLimitMax).optional(),
@@ -134,23 +136,25 @@ export const MCP_TOOLS = {
     name: "wiki_create_page",
     title: "Create a page",
     description:
-      "Create a new wiki page (costs credits). Title is required; provide markdown and/or json. Link to other pages with [text](/page/slug) or [[slug]]; use #hashtags to tag.",
+      "Create a new wiki page (costs credits). Title is required; provide markdown and/or json. Link to other pages with [text](/page/slug) or [[slug]]; use #hashtags to tag. visibility 'private' makes the page readable only by you and the members you share it with (not searchable, no rent).",
     inputSchema: z.object({
       title: z.string().min(1).max(LIMITS.titleMax),
       markdown: z.string().max(LIMITS.markdownMax).optional(),
       json: jsonValueSchema.optional(),
+      visibility: pageVisibilitySchema.optional().describe("'public' (default) or 'private'"),
     }),
     annotations: write,
   }),
   wiki_edit_page: def({
     name: "wiki_edit_page",
     title: "Edit a page",
-    description: "Edit a page you own (free). Only provided fields change; pass json: null to clear json.",
+    description: "Edit a page you own or are an admin/editor of (free). Only provided fields change; pass json: null to clear json. visibility can only be changed by the owner or an admin; making a page private de-indexes it and stops its rent.",
     inputSchema: z.object({
       slug: z.string().min(1).max(200),
       title: z.string().min(1).max(LIMITS.titleMax).optional(),
       markdown: z.string().max(LIMITS.markdownMax).nullable().optional(),
       json: jsonValueSchema.nullable().optional(),
+      visibility: pageVisibilitySchema.optional(),
     }),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }),
@@ -180,11 +184,41 @@ export const MCP_TOOLS = {
     inputSchema: z.object({ commentId: z.string().min(1).max(128) }),
     annotations: destructive,
   }),
+  wiki_share_page: def({
+    name: "wiki_share_page",
+    title: "Share a page",
+    description:
+      "Invite an account by email to a page you own or administer, as 'viewer' (read + comment), 'editor' (edit + comment) or 'admin' (edit + manage members). Existing accounts are added immediately; unknown emails receive an invite email with an accept link. Re-inviting an existing member changes their role.",
+    inputSchema: z.object({
+      slug: z.string().min(1).max(200),
+      email: z.string().min(3).max(254),
+      role: memberRoleSchema.optional().describe("Default 'viewer'"),
+    }),
+    annotations: write,
+  }),
+  wiki_list_members: def({
+    name: "wiki_list_members",
+    title: "List page members",
+    description: "Owner, members and their roles for a page you have access to; owner/admins also see pending email invites.",
+    inputSchema: z.object({ slug: z.string().min(1).max(200) }),
+    annotations: ro,
+  }),
+  wiki_remove_member: def({
+    name: "wiki_remove_member",
+    title: "Remove a member",
+    description: "Remove a member (by uid) from a page you own or administer, or revoke a pending invite (by email). Members may remove themselves.",
+    inputSchema: z.object({
+      slug: z.string().min(1).max(200),
+      uid: z.string().max(128).optional().describe("Member uid to remove"),
+      email: z.string().max(254).optional().describe("Pending invite email to revoke"),
+    }),
+    annotations: destructive,
+  }),
   wiki_set_rent: def({
     name: "wiki_set_rent",
     title: "Set daily rent",
     description:
-      "Pay a daily rent (cents/day) on a page or comment you own to boost its ranking. 0 stops the rent. First rent is charged immediately; changes apply at the next daily charge.",
+      "Pay a daily rent (cents/day) on a page or comment you own to boost its ranking. 0 stops the rent. First rent is charged immediately; changes apply at the next daily charge. Not available on private pages.",
     inputSchema: z.object({
       target: z.enum(["page", "comment"]),
       id: z.string().min(1).max(200).describe("Page slug or comment id"),

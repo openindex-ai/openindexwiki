@@ -22,6 +22,7 @@ function errorResult(err: unknown): ToolResult {
       ...(err instanceof WikiApiError && err.topupUrl ? { topupUrl: err.topupUrl } : {}),
       ...(err instanceof WikiApiError && err.existingSlug ? { existingSlug: err.existingSlug } : {}),
       ...(err instanceof WikiApiError && err.status === 401 ? { hint: "Call wiki_login, or configure OPENINDEX_WIKI_TOKEN." } : {}),
+      ...(err instanceof WikiApiError && err.code === "PAGE_PRIVATE" ? { hint: "This page is private; ask its owner to share it with you (wiki_share_page)." } : {}),
     },
   };
   return { isError: true, content: [{ type: "text", text: JSON.stringify(body, null, 2) }] };

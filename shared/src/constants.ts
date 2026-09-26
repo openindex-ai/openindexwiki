@@ -31,7 +31,12 @@ export const LIMITS = {
   listLimitDefault: 20,
   listLimitMax: 100,
   apiKeysPerUser: 20,
+  /** members (excluding the owner) a page can have */
+  membersPerPage: 100,
 } as const;
+
+/** Pending invites expire after two weeks. */
+export const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
 export const SEARCH = {
   rrfK: 60,

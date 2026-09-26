@@ -55,6 +55,7 @@ export function fail(err: unknown): never {
     process.stderr.write(`Error${status ? ` (${status})` : ""}: ${message}\n`);
     if (code === "INSUFFICIENT_CREDITS" && extra.topupUrl) process.stderr.write(`Top up your credits here: ${extra.topupUrl}\n`);
     if (code === "UNAUTHORIZED") process.stderr.write(`Run \`openindexwiki login\` or set OPENINDEX_WIKI_TOKEN.\n`);
+    if (code === "PAGE_PRIVATE") process.stderr.write(`This page is private; ask its owner to share it with you.\n`);
     if (code === "SLUG_TAKEN" && extra.existingSlug) process.stderr.write(`Existing page: /page/${extra.existingSlug}\n`);
   }
   process.exit(exit);

@@ -1,9 +1,11 @@
-import type { McpToolName } from "@openindex/wiki-shared";
+import type { MemberRole, McpToolName, PageVisibility } from "@openindex/wiki-shared";
 import type { WikiClient } from "../client";
 
 type Args = Record<string, unknown>;
 const s = (v: unknown) => (typeof v === "string" ? v : undefined);
 const n = (v: unknown) => (typeof v === "number" ? v : undefined);
+const vis = (v: unknown): PageVisibility | undefined => (v === "public" || v === "private" ? v : undefined);
+const role = (v: unknown): MemberRole | undefined => (v === "admin" || v === "editor" || v === "viewer" ? v : undefined);
 
 /** Map MCP tool calls to WikiClient calls (used by the stdio server). */
 export async function executeTool(client: WikiClient, name: McpToolName, args: Args): Promise<unknown> {
@@ -16,7 +18,7 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       return client.getPage(slug);
     }
     case "wiki_list_pages":
-      return client.listPages({ tag: s(args.tag), owner: s(args.owner), sort: args.sort as "recent" | "rent" | "alpha" | undefined, from: s(args.from), limit: n(args.limit), cursor: s(args.cursor) });
+      return client.listPages({ tag: s(args.tag), owner: s(args.owner), member: args.shared === true ? "me" : undefined, sort: args.sort as "recent" | "rent" | "alpha" | undefined, from: s(args.from), limit: n(args.limit), cursor: s(args.cursor) });
     case "wiki_get_index":
       return client.index();
     case "wiki_get_backlinks": {
@@ -40,12 +42,13 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       return { url: `${client.baseUrl}/credits`, note: "A human must complete the payment in a browser." };
     }
     case "wiki_create_page":
-      return client.createPage({ title: String(args.title ?? ""), markdown: s(args.markdown), json: args.json as never });
+      return client.createPage({ title: String(args.title ?? ""), markdown: s(args.markdown), json: args.json as never, visibility: vis(args.visibility) });
     case "wiki_edit_page":
       return client.updatePage(String(args.slug ?? ""), {
         title: s(args.title),
         markdown: args.markdown === null ? null : s(args.markdown),
         json: args.json as never,
+        visibility: vis(args.visibility),
       });
     case "wiki_delete_page":
       return client.deletePage(String(args.slug ?? ""));
@@ -53,6 +56,24 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       return client.addComment(String(args.slug ?? ""), { markdown: s(args.markdown), json: args.json as never, parentId: s(args.parentId) ?? null });
     case "wiki_delete_comment":
       return client.deleteComment(String(args.commentId ?? ""));
+    case "wiki_share_page":
+      return client.invite(String(args.slug ?? ""), { email: String(args.email ?? ""), role: role(args.role) });
+    case "wiki_list_members":
+      return client.members(String(args.slug ?? ""));
+    case "wiki_remove_member": {
+      const slug = String(args.slug ?? "");
+      const uid = s(args.uid);
+      const email = s(args.email)?.trim().toLowerCase();
+      if (uid) return client.removeMember(slug, uid);
+      if (email) {
+        const { invites } = await client.members(slug);
+        const invite = (invites ?? []).find((i) => i.email === email && i.status === "pending");
+        if (!invite) throw new Error(`No pending invite for ${email} on /page/${slug}; to remove a member pass their uid (see wiki_list_members)`);
+        await client.revokeInvite(slug, invite.id);
+        return { ok: true, revoked: invite.id, email };
+      }
+      throw new Error("Pass uid (to remove a member) or email (to revoke a pending invite)");
+    }
     case "wiki_set_rent":
       return client.setRent(args.target as "page" | "comment", String(args.id ?? ""), Number(args.centsPerDay ?? 0));
     default:

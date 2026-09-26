@@ -1,4 +1,5 @@
 import type {
+  AcceptedInvite,
   Account,
   ApiErrorBody,
   Comment,
@@ -9,8 +10,13 @@ import type {
   DeviceStartResponse,
   EditEntry,
   IndexData,
+  InvitePreview,
+  InviteResult,
   LedgerEntry,
+  MemberRole,
+  MembersResponse,
   Page,
+  PageMember,
   PageResponse,
   PageSummary,
   PublicProfile,
@@ -136,7 +142,7 @@ export class WikiClient {
   }
 
   /* ---------- pages ---------- */
-  listPages(q: { tag?: string; owner?: string; sort?: "recent" | "rent" | "alpha"; from?: string; limit?: number; cursor?: string }) {
+  listPages(q: { tag?: string; owner?: string; member?: "me"; sort?: "recent" | "rent" | "alpha"; from?: string; limit?: number; cursor?: string }) {
     return this.request<{ pages: PageSummary[]; nextCursor: string | null }>("GET", "/api/pages", { query: q });
   }
   getPage(slug: string) {
@@ -171,6 +177,29 @@ export class WikiClient {
   }
   tag(tag: string, opts: { limit?: number; cursor?: string } = {}) {
     return this.request<{ tag: string; pageCount: number; pages: PageSummary[]; nextCursor: string | null }>("GET", `/api/tags/${encodeURIComponent(tag)}`, { query: opts });
+  }
+
+  /* ---------- members / invites ---------- */
+  members(slug: string) {
+    return this.request<MembersResponse>("GET", `/api/pages/${encodeURIComponent(slug)}/members`);
+  }
+  invite(slug: string, input: { email: string; role?: MemberRole }) {
+    return this.request<InviteResult>("POST", `/api/pages/${encodeURIComponent(slug)}/invites`, { body: input });
+  }
+  setMemberRole(slug: string, uid: string, role: MemberRole) {
+    return this.request<{ member: PageMember }>("PATCH", `/api/pages/${encodeURIComponent(slug)}/members/${encodeURIComponent(uid)}`, { body: { role } });
+  }
+  removeMember(slug: string, uid: string) {
+    return this.request<{ ok: true }>("DELETE", `/api/pages/${encodeURIComponent(slug)}/members/${encodeURIComponent(uid)}`);
+  }
+  revokeInvite(slug: string, inviteId: string) {
+    return this.request<{ ok: true }>("DELETE", `/api/pages/${encodeURIComponent(slug)}/invites/${encodeURIComponent(inviteId)}`);
+  }
+  previewInvite(token: string) {
+    return this.request<{ invite: InvitePreview }>("GET", `/api/invites/${encodeURIComponent(token)}`);
+  }
+  acceptInvite(token: string) {
+    return this.request<{ accepted: AcceptedInvite }>("POST", `/api/invites/${encodeURIComponent(token)}/accept`);
   }
 
   /* ---------- comments ---------- */
