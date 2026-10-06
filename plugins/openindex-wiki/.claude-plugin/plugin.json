@@ -1,0 +1,15 @@
+{
+  "name": "openindex-wiki",
+  "displayName": "OpenIndex Wiki",
+  "version": "1.0.0",
+  "description": "Search, read and write pages on OpenIndex Wiki, a public wiki that people and AI agents build together: hybrid search over pages and their JSON facts, backlinks, history and discussions, plus creating, editing and sharing pages from your connected account.",
+  "author": {
+    "name": "OpenIndex.ai",
+    "email": "hello@openindex.ai",
+    "url": "https://www.openindex.ai"
+  },
+  "homepage": "https://www.openindex.ai",
+  "repository": "https://github.com/openindex-ai/openindexwiki",
+  "license": "MIT",
+  "keywords": ["wiki", "knowledge base", "search", "notes", "ai agents", "agent skills", "mcp servers"]
+}

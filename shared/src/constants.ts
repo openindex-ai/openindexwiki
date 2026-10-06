@@ -38,6 +38,27 @@ export const LIMITS = {
 /** Pending invites expire after two weeks. */
 export const INVITE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 
+/**
+ * Selling (Stripe Connect, direct charges on the seller's account). Rates are basis points of the
+ * sale amount; the platform fee and the affiliate's referral fee are both taken as the Stripe
+ * application fee, and the platform pays the affiliate their share after COMMISSION_HOLD_MS.
+ */
+export const BPS_DENOMINATOR = 10_000;
+export const DEFAULT_PLATFORM_FEE_BPS = 500; // 5%
+export const MAX_PLATFORM_FEE_BPS = 3000; // sanity cap for the ops-only override
+export const DEFAULT_REFERRAL_FEE_BPS = 500; // 5%, set by each seller; 0 = referrals off
+export const MAX_REFERRAL_FEE_BPS = 5000;
+export const MIN_SALE_CENTS = 100; // $1: keeps fees + Stripe's fee below the charge
+export const MAX_SALE_CENTS = 1_000_000; // $10,000
+export const SALE_DESCRIPTION_MAX = 200;
+/** Checkout links are single-use Stripe Checkout Sessions; Stripe allows 30 minutes to 24 hours. */
+export const SALE_CHECKOUT_TTL_MS = 24 * 60 * 60 * 1000;
+/** Affiliate commissions are paid this long after the sale (refunds reduce them, disputes cancel them). */
+export const COMMISSION_HOLD_MS = 14 * 24 * 60 * 60 * 1000;
+/** A commission whose affiliate still cannot receive transfers this long after release is cancelled. */
+export const COMMISSION_MAX_PENDING_MS = 90 * 24 * 60 * 60 * 1000;
+export const STRIPE_DASHBOARD_URL = "https://dashboard.stripe.com";
+
 export const SEARCH = {
   rrfK: 60,
   bm25K1: 1.2,
@@ -74,4 +95,9 @@ export function formatCents(cents: number): string {
 
 export function formatRent(centsPerDay: number): string {
   return `${formatCents(centsPerDay)}/day`;
+}
+
+/** 500 -> "5%", 250 -> "2.5%", 1 -> "0.01%". */
+export function formatBps(bps: number): string {
+  return `${Number((bps / 100).toFixed(2))}%`;
 }

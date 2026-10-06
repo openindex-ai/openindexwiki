@@ -5,6 +5,7 @@ import { registerCommentCommands } from "./commands/comments";
 import { registerMemberCommands } from "./commands/members";
 import { registerMiscCommands } from "./commands/misc";
 import { registerPageCommands } from "./commands/pages";
+import { registerPayoutsCommands } from "./commands/payouts";
 import { initContext, type GlobalOpts } from "./context";
 import { fail } from "./output";
 import { VERSION } from "./version";
@@ -29,6 +30,7 @@ registerAuthCommands(program);
 registerPageCommands(program);
 registerCommentCommands(program);
 registerMemberCommands(program);
+registerPayoutsCommands(program);
 registerMiscCommands(program);
 
 program.parseAsync(process.argv).catch(fail);

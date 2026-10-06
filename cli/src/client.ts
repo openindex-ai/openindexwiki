@@ -19,8 +19,12 @@ import type {
   PageMember,
   PageResponse,
   PageSummary,
+  PayoutsOnboardingLink,
+  PayoutsStatus,
   PublicProfile,
   Rent,
+  Sale,
+  SaleCheckoutResult,
   SearchResponse,
   TagInfo,
   UpdatePageInput,
@@ -35,6 +39,7 @@ export class WikiApiError extends Error {
     public topupUrl?: string,
     public details?: unknown,
     public existingSlug?: string,
+    public setupUrl?: string,
   ) {
     super(message);
     this.name = "WikiApiError";
@@ -101,7 +106,7 @@ export class WikiClient {
     }
     if (!res.ok) {
       const e = (data as ApiErrorBody | null)?.error;
-      throw new WikiApiError(res.status, e?.code ?? "HTTP_ERROR", e?.message ?? `${method} ${path} failed with ${res.status}`, e?.topupUrl, e?.details, e?.existingSlug);
+      throw new WikiApiError(res.status, e?.code ?? "HTTP_ERROR", e?.message ?? `${method} ${path} failed with ${res.status}`, e?.topupUrl, e?.details, e?.existingSlug, e?.setupUrl);
     }
     return data as T;
   }
@@ -226,5 +231,22 @@ export class WikiClient {
   }
   ledger(limit = 50) {
     return this.request<{ entries: LedgerEntry[]; nextCursor: string | null }>("GET", "/api/credits/ledger", { query: { limit } });
+  }
+
+  /* ---------- selling (Stripe Connect) ---------- */
+  payouts(refresh = false) {
+    return this.request<{ payouts: PayoutsStatus }>("GET", "/api/payouts", { query: { refresh: refresh ? "1" : undefined } });
+  }
+  payoutsOnboarding(country?: string) {
+    return this.request<PayoutsOnboardingLink>("POST", "/api/payouts/onboarding", { body: country ? { country } : {} });
+  }
+  updatePayouts(referralFeeBps: number) {
+    return this.request<{ payouts: PayoutsStatus }>("PATCH", "/api/payouts", { body: { referralFeeBps } });
+  }
+  createSaleCheckout(input: { amountCents: number; description: string; affiliateUid?: string }) {
+    return this.request<SaleCheckoutResult>("POST", "/api/sales/checkout", { body: input });
+  }
+  sales(q: { as?: "seller" | "affiliate"; limit?: number; cursor?: string } = {}) {
+    return this.request<{ sales: Sale[]; nextCursor: string | null }>("GET", "/api/sales", { query: q });
   }
 }

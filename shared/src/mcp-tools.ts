@@ -1,5 +1,14 @@
 import { z } from "zod";
-import { LIMITS, MAX_RENT_CENTS_PER_DAY, MAX_TOPUP_CENTS, MIN_TOPUP_CENTS } from "./constants";
+import {
+  LIMITS,
+  MAX_REFERRAL_FEE_BPS,
+  MAX_RENT_CENTS_PER_DAY,
+  MAX_SALE_CENTS,
+  MAX_TOPUP_CENTS,
+  MIN_SALE_CENTS,
+  MIN_TOPUP_CENTS,
+  SALE_DESCRIPTION_MAX,
+} from "./constants";
 import { jsonValueSchema } from "./schemas";
 import { memberRoleSchema, pageVisibilitySchema } from "./access";
 
@@ -225,6 +234,55 @@ export const MCP_TOOLS = {
       centsPerDay: z.number().int().min(0).max(MAX_RENT_CENTS_PER_DAY),
     }),
     annotations: write,
+  }),
+  wiki_payouts_status: def({
+    name: "wiki_payouts_status",
+    title: "Payouts status",
+    description:
+      "Your Stripe Connect status: whether you can sell (create checkout links) and receive referral commissions, whether Stripe needs more information, the platform commission on your sales and the referral rate you pay affiliates.",
+    inputSchema: z.object({}),
+    annotations: ro,
+  }),
+  wiki_payouts_setup_url: def({
+    name: "wiki_payouts_setup_url",
+    title: "Get the payouts setup link",
+    description:
+      "Create your Stripe connected account if needed and return a Stripe-hosted onboarding URL. A human must open it in a browser to enter business, identity and bank details; the link is single-use and short-lived (setupUrl is a stable fallback that makes a fresh one).",
+    inputSchema: z.object({
+      country: z.string().length(2).optional().describe("Two-letter country of the business, used only when the account is first created (default US)"),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }),
+  wiki_set_referral_rate: def({
+    name: "wiki_set_referral_rate",
+    title: "Set your referral rate",
+    description: `Set the commission you pay an affiliate who refers a sale, in basis points (500 = 5%, max ${MAX_REFERRAL_FEE_BPS}); 0 turns referrals off. It is charged on top of the platform commission and fixed when each checkout link is created.`,
+    inputSchema: z.object({ referralFeeBps: z.number().int().min(0).max(MAX_REFERRAL_FEE_BPS) }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }),
+  wiki_create_checkout_link: def({
+    name: "wiki_create_checkout_link",
+    title: "Create a checkout link",
+    description:
+      "Create a Stripe-hosted checkout for a buyer to pay you (you are the seller and merchant of record). Single payment, valid 24 hours. The platform commission and, with affiliateUid, the referral commission are deducted as a Stripe application fee. Requires completed payouts setup (else PAYOUTS_NOT_READY with setupUrl); the affiliate must also have completed it.",
+    inputSchema: z.object({
+      amountCents: z.number().int().min(MIN_SALE_CENTS).max(MAX_SALE_CENTS).describe("Amount in USD cents"),
+      description: z.string().min(1).max(SALE_DESCRIPTION_MAX).describe("What the buyer is paying for (shown on the checkout page)"),
+      affiliateUid: z.string().max(128).optional().describe("uid of the wiki user who referred this buyer"),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  }),
+  wiki_list_sales: def({
+    name: "wiki_list_sales",
+    title: "List sales or commissions",
+    description:
+      "as='seller' (default): checkout links you created and whether they were paid. as='affiliate': sales that earn you a referral commission, with its status (pending until the hold ends, then paid or cancelled).",
+    inputSchema: z.object({
+      as: z.enum(["seller", "affiliate"]).optional(),
+      limit: z.number().int().min(1).max(LIMITS.listLimitMax).optional(),
+      cursor: z.string().max(500).optional(),
+    }),
+    annotations: ro,
   }),
 } as const;
 

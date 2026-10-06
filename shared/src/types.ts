@@ -1,5 +1,6 @@
 /** Wire types (JSON over HTTP). Timestamps are ISO-8601 strings. */
 import type { InviteStatus, MemberRole, PageRole, PageVisibility } from "./access";
+import type { CapabilityStatus, CommissionCancelReason, CommissionStatus, PayoutsState, SaleSource, SaleStatus } from "./sales";
 
 export type PageStatus = "active" | "deleted";
 export type RentStatus = "none" | "active" | "failed";
@@ -152,6 +153,17 @@ export interface ApiKeyInfo {
   useCount: number;
 }
 
+/** An app connected to the account through OAuth (e.g. ChatGPT), as listed on the account page. */
+export interface OAuthGrantInfo {
+  id: string;
+  clientName: string;
+  /** host of the client's metadata URL or redirect URI, shown next to the name */
+  clientHost: string;
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt: string;
+}
+
 export interface DeviceStartResponse {
   deviceCode: string;
   userCode: string;
@@ -268,4 +280,84 @@ export interface PageResponse {
   backlinks: PageSummary[];
   backlinkCount: number;
   linkTargets: LinkTarget[];
+}
+
+/** Your Stripe Connect status for selling and for receiving referral commissions. */
+export interface PayoutsStatus {
+  /** Stripe connected account id (acct_…), null until setup starts */
+  accountId: string | null;
+  state: PayoutsState;
+  canSell: boolean;
+  canReceiveCommissions: boolean;
+  /** Stripe card_payments (selling) */
+  cardPayments: CapabilityStatus;
+  /** Stripe stripe_balance.stripe_transfers (receiving commissions) */
+  stripeTransfers: CapabilityStatus;
+  /** Stripe needs more information; continue onboarding */
+  requirementsDue: boolean;
+  /** when the status was last read from Stripe */
+  checkedAt: string | null;
+  /** platform commission on your sales (basis points) */
+  platformFeeBps: number;
+  /** referral commission you pay affiliates (basis points; 0 = referrals off) */
+  referralFeeBps: number;
+  maxReferralFeeBps: number;
+  /** days before an affiliate commission is paid */
+  commissionHoldDays: number;
+  /** the web page to set up payouts or continue onboarding */
+  setupUrl: string;
+  /** the Stripe Dashboard, where sellers manage payments, refunds, disputes and payouts */
+  dashboardUrl: string;
+}
+
+export interface SaleCommission {
+  status: CommissionStatus;
+  /** quoted at sale time; the final amount once paid */
+  cents: number;
+  releaseAt: string | null;
+  paidAt: string | null;
+  cancelReason: CommissionCancelReason | null;
+  /** why the last payout attempt did not go through */
+  lastError: string | null;
+}
+
+export interface Sale {
+  id: string;
+  source: SaleSource;
+  status: SaleStatus;
+  sellerUid: string;
+  sellerName: string;
+  affiliateUid: string | null;
+  affiliateName: string | null;
+  description: string;
+  amountCents: number;
+  currency: string;
+  platformFeeBps: number;
+  referralFeeBps: number;
+  platformFeeCents: number;
+  referralFeeCents: number;
+  applicationFeeCents: number;
+  /** only for the seller, while the checkout is open */
+  checkoutUrl: string | null;
+  checkoutExpiresAt: string;
+  paidAt: string | null;
+  commission: SaleCommission;
+  createdAt: string;
+}
+
+export interface SaleCheckoutResult {
+  /** Stripe-hosted checkout for the buyer: one payment, expires at expiresAt */
+  url: string;
+  sessionId: string;
+  expiresAt: string;
+  sale: Sale;
+}
+
+export interface PayoutsOnboardingLink {
+  /** Stripe-hosted onboarding; single use and short-lived, open it in a browser */
+  url: string;
+  expiresAt: string | null;
+  /** stable fallback: the wiki page that creates a fresh onboarding link */
+  setupUrl: string;
+  payouts: PayoutsStatus;
 }

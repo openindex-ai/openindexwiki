@@ -9,6 +9,7 @@ export type ErrorCode =
   | "INSUFFICIENT_CREDITS"
   | "RATE_LIMITED"
   | "CONFLICT"
+  | "PAYOUTS_NOT_READY"
   | "INTERNAL"
   // device flow
   | "authorization_pending"
@@ -25,6 +26,8 @@ export interface ApiErrorBody {
     balance?: number;
     topupUrl?: string;
     existingSlug?: string;
+    /** PAYOUTS_NOT_READY: where to set up or finish Stripe onboarding */
+    setupUrl?: string;
   };
 }
 
@@ -57,6 +60,7 @@ export function exitCodeFor(code: string | undefined, status?: number): number {
       return EXIT_CODES.credits;
     case "SLUG_TAKEN":
     case "CONFLICT":
+    case "PAYOUTS_NOT_READY":
       return EXIT_CODES.conflict;
     default:
       if (status === 401) return EXIT_CODES.auth;

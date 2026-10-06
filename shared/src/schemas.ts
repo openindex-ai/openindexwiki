@@ -1,5 +1,14 @@
 import { z } from "zod";
-import { LIMITS, MAX_RENT_CENTS_PER_DAY, MAX_TOPUP_CENTS, MIN_TOPUP_CENTS } from "./constants";
+import {
+  LIMITS,
+  MAX_REFERRAL_FEE_BPS,
+  MAX_RENT_CENTS_PER_DAY,
+  MAX_SALE_CENTS,
+  MAX_TOPUP_CENTS,
+  MIN_SALE_CENTS,
+  MIN_TOPUP_CENTS,
+  SALE_DESCRIPTION_MAX,
+} from "./constants";
 import { memberRoleSchema, pageVisibilitySchema } from "./access";
 
 export const jsonValueSchema = z.json();
@@ -115,3 +124,37 @@ export const setMemberRoleSchema = z.object({
   role: memberRoleSchema,
 });
 export type SetMemberRoleInput = z.infer<typeof setMemberRoleSchema>;
+
+/** Selling: a single-use hosted checkout on the caller's (the seller's) Stripe account. */
+export const createSaleCheckoutSchema = z.object({
+  amountCents: z.number().int().min(MIN_SALE_CENTS).max(MAX_SALE_CENTS),
+  description: z.string().trim().min(1).max(SALE_DESCRIPTION_MAX),
+  /** uid of the wiki user who referred the buyer; earns the seller's referral rate */
+  affiliateUid: z.string().trim().min(1).max(128).optional(),
+});
+export type CreateSaleCheckoutInput = z.infer<typeof createSaleCheckoutSchema>;
+
+export const updatePayoutsSettingsSchema = z.object({
+  /** rate this seller pays affiliates, in basis points (500 = 5%); 0 turns referrals off */
+  referralFeeBps: z.number().int().min(0).max(MAX_REFERRAL_FEE_BPS),
+});
+export type UpdatePayoutsSettingsInput = z.infer<typeof updatePayoutsSettingsSchema>;
+
+export const payoutsOnboardingSchema = z.object({
+  /** ISO 3166-1 alpha-2 country of the business, used when the Stripe account is first created (default US) */
+  country: z
+    .string()
+    .trim()
+    .regex(/^[A-Za-z]{2}$/, "country must be a two-letter ISO code")
+    .transform((c) => c.toLowerCase())
+    .optional(),
+});
+export type PayoutsOnboardingInput = z.infer<typeof payoutsOnboardingSchema>;
+
+export const listSalesQuerySchema = z.object({
+  /** seller: checkouts you created; affiliate: sales that earn you a commission */
+  as: z.enum(["seller", "affiliate"]).default("seller"),
+  limit: z.coerce.number().int().min(1).max(LIMITS.listLimitMax).default(LIMITS.listLimitDefault),
+  cursor: z.string().max(500).optional(),
+});
+export type ListSalesQuery = z.infer<typeof listSalesQuerySchema>;

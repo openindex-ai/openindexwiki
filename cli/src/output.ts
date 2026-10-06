@@ -36,7 +36,7 @@ export function fail(err: unknown): never {
   if (err instanceof WikiApiError) {
     code = err.code;
     status = err.status;
-    extra = { status: err.status, topupUrl: err.topupUrl, details: err.details, existingSlug: err.existingSlug };
+    extra = { status: err.status, topupUrl: err.topupUrl, details: err.details, existingSlug: err.existingSlug, setupUrl: err.setupUrl };
     exit = exitCodeFor(err.code, err.status);
   } else if (err instanceof NetworkError) {
     code = "NETWORK";
@@ -57,6 +57,7 @@ export function fail(err: unknown): never {
     if (code === "UNAUTHORIZED") process.stderr.write(`Run \`openindexwiki login\` or set OPENINDEX_WIKI_TOKEN.\n`);
     if (code === "PAGE_PRIVATE") process.stderr.write(`This page is private; ask its owner to share it with you.\n`);
     if (code === "SLUG_TAKEN" && extra.existingSlug) process.stderr.write(`Existing page: /page/${extra.existingSlug}\n`);
+    if (code === "PAYOUTS_NOT_READY") process.stderr.write(`Set up payouts in a browser: ${extra.setupUrl ?? "run `openindexwiki payouts setup`"}\n`);
   }
   process.exit(exit);
 }

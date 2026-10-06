@@ -2,7 +2,7 @@
   "name": "openindexwiki",
   "version": "0.1.0",
   "private": true,
-  "description": "OpenIndex Wiki: CLI, MCP server and agent skill for an index of knowledge for AI agents",
+  "description": "OpenIndex Wiki: CLI, MCP server, agent skill and Claude plugin for an index of knowledge for AI agents",
   "workspaces": [
     "shared",
     "cli"

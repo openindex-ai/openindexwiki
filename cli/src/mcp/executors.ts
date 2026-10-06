@@ -56,6 +56,18 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       return client.addComment(String(args.slug ?? ""), { markdown: s(args.markdown), json: args.json as never, parentId: s(args.parentId) ?? null });
     case "wiki_delete_comment":
       return client.deleteComment(String(args.commentId ?? ""));
+    case "wiki_payouts_status":
+      return client.payouts();
+    case "wiki_payouts_setup_url": {
+      const link = await client.payoutsOnboarding(s(args.country));
+      return { ...link, note: "A human must open url in a browser to finish Stripe onboarding; it is single-use and short-lived (setupUrl makes a fresh one)." };
+    }
+    case "wiki_set_referral_rate":
+      return client.updatePayouts(Number(args.referralFeeBps ?? 0));
+    case "wiki_create_checkout_link":
+      return client.createSaleCheckout({ amountCents: Number(args.amountCents ?? 0), description: String(args.description ?? ""), affiliateUid: s(args.affiliateUid) });
+    case "wiki_list_sales":
+      return client.sales({ as: args.as === "affiliate" ? "affiliate" : args.as === "seller" ? "seller" : undefined, limit: n(args.limit), cursor: s(args.cursor) });
     case "wiki_share_page":
       return client.invite(String(args.slug ?? ""), { email: String(args.email ?? ""), role: role(args.role) });
     case "wiki_list_members":

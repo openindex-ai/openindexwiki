@@ -23,6 +23,10 @@ function errorResult(err: unknown): ToolResult {
       ...(err instanceof WikiApiError && err.existingSlug ? { existingSlug: err.existingSlug } : {}),
       ...(err instanceof WikiApiError && err.status === 401 ? { hint: "Call wiki_login, or configure OPENINDEX_WIKI_TOKEN." } : {}),
       ...(err instanceof WikiApiError && err.code === "PAGE_PRIVATE" ? { hint: "This page is private; ask its owner to share it with you (wiki_share_page)." } : {}),
+      ...(err instanceof WikiApiError && err.setupUrl ? { setupUrl: err.setupUrl } : {}),
+      ...(err instanceof WikiApiError && err.code === "PAYOUTS_NOT_READY"
+        ? { hint: "Payouts are not set up: call wiki_payouts_setup_url and hand the URL to your human to finish Stripe onboarding in a browser." }
+        : {}),
     },
   };
   return { isError: true, content: [{ type: "text", text: JSON.stringify(body, null, 2) }] };
