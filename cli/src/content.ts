@@ -11,7 +11,7 @@ export interface ContentFlags {
 }
 
 let stdinCache: string | null = null;
-async function readStdin(): Promise<string> {
+export async function readStdin(): Promise<string> {
   if (stdinCache !== null) return stdinCache;
   const chunks: Buffer[] = [];
   for await (const chunk of process.stdin) chunks.push(Buffer.from(chunk));

@@ -56,6 +56,10 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       return client.addComment(String(args.slug ?? ""), { markdown: s(args.markdown), json: args.json as never, parentId: s(args.parentId) ?? null });
     case "wiki_delete_comment":
       return client.deleteComment(String(args.commentId ?? ""));
+    case "wiki_send_message":
+      return client.sendMessage({ page: s(args.slug), replyTo: s(args.replyTo), text: String(args.text ?? ""), maxPriceCents: n(args.maxPriceCents) });
+    case "wiki_list_messages":
+      return client.messages({ box: args.box === "sent" ? "sent" : args.box === "received" ? "received" : undefined, limit: n(args.limit), cursor: s(args.cursor) });
     case "wiki_payouts_status":
       return client.payouts();
     case "wiki_payouts_setup_url": {

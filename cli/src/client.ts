@@ -14,6 +14,7 @@ import type {
   InviteResult,
   LedgerEntry,
   MemberRole,
+  Message,
   MembersResponse,
   Page,
   PageMember,
@@ -26,8 +27,11 @@ import type {
   Sale,
   SaleCheckoutResult,
   SearchResponse,
+  SendMessageInput,
+  SendMessageResult,
   TagInfo,
   TypeInfo,
+  UpdateMeInput,
   UpdatePageInput,
 } from "@openindex/wiki-shared";
 import { VERSION } from "./version";
@@ -41,6 +45,8 @@ export class WikiApiError extends Error {
     public details?: unknown,
     public existingSlug?: string,
     public setupUrl?: string,
+    /** INSUFFICIENT_CREDITS / PRICE_ABOVE_MAX: the cents the action costs */
+    public required?: number,
   ) {
     super(message);
     this.name = "WikiApiError";
@@ -107,7 +113,7 @@ export class WikiClient {
     }
     if (!res.ok) {
       const e = (data as ApiErrorBody | null)?.error;
-      throw new WikiApiError(res.status, e?.code ?? "HTTP_ERROR", e?.message ?? `${method} ${path} failed with ${res.status}`, e?.topupUrl, e?.details, e?.existingSlug, e?.setupUrl);
+      throw new WikiApiError(res.status, e?.code ?? "HTTP_ERROR", e?.message ?? `${method} ${path} failed with ${res.status}`, e?.topupUrl, e?.details, e?.existingSlug, e?.setupUrl, e?.required);
     }
     return data as T;
   }
@@ -130,6 +136,9 @@ export class WikiClient {
   /* ---------- auth ---------- */
   me() {
     return this.request<{ account: Account; via: string }>("GET", "/api/me");
+  }
+  updateMe(input: UpdateMeInput) {
+    return this.request<{ account: Account }>("PATCH", "/api/me", { body: input });
   }
   deviceStart(clientName: string) {
     return this.request<DeviceStartResponse>("POST", "/api/cli/device/start", { body: { clientName } });
@@ -236,6 +245,17 @@ export class WikiClient {
   }
   ledger(limit = 50) {
     return this.request<{ entries: LedgerEntry[]; nextCursor: string | null }>("GET", "/api/credits/ledger", { query: { limit } });
+  }
+
+  /* ---------- messages ---------- */
+  sendMessage(input: SendMessageInput) {
+    return this.request<SendMessageResult>("POST", "/api/messages", { body: input });
+  }
+  messages(q: { box?: "received" | "sent"; limit?: number; cursor?: string } = {}) {
+    return this.request<{ messages: Message[]; nextCursor: string | null }>("GET", "/api/messages", { query: q });
+  }
+  message(id: string) {
+    return this.request<{ message: Message }>("GET", `/api/messages/${encodeURIComponent(id)}`);
   }
 
   /* ---------- selling (Stripe Connect) ---------- */

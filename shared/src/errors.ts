@@ -10,6 +10,8 @@ export type ErrorCode =
   | "RATE_LIMITED"
   | "CONFLICT"
   | "PAYOUTS_NOT_READY"
+  | "PRICE_ABOVE_MAX"
+  | "MESSAGES_OFF"
   | "INTERNAL"
   // device flow
   | "authorization_pending"
@@ -50,6 +52,7 @@ export function exitCodeFor(code: string | undefined, status?: number): number {
       return EXIT_CODES.auth;
     case "FORBIDDEN":
     case "PAGE_PRIVATE":
+    case "MESSAGES_OFF":
       return EXIT_CODES.forbidden;
     case "NOT_FOUND":
       return EXIT_CODES.notFound;
@@ -61,6 +64,7 @@ export function exitCodeFor(code: string | undefined, status?: number): number {
     case "SLUG_TAKEN":
     case "CONFLICT":
     case "PAYOUTS_NOT_READY":
+    case "PRICE_ABOVE_MAX":
       return EXIT_CODES.conflict;
     default:
       if (status === 401) return EXIT_CODES.auth;

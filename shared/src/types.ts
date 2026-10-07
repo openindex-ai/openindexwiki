@@ -89,9 +89,17 @@ export interface Account {
   balance: number;
   totalToppedUp: number;
   totalSpent: number;
+  /** credits received from other users: comments on your pages and messages to you */
+  totalEarned: number;
   counts: { pages: number; comments: number };
   createdAt: string;
   topupUrl: string;
+  /** what others pay to send you a message (you receive MESSAGE_RECIPIENT_SHARE_BPS of it) */
+  messagePriceCents: number;
+  /** false: nobody can message you */
+  acceptMessages: boolean;
+  /** email me when someone comments on one of my pages */
+  commentEmails: boolean;
 }
 
 export interface PublicProfile {
@@ -100,6 +108,35 @@ export interface PublicProfile {
   photoURL: string | null;
   counts: { pages: number; comments: number };
   createdAt: string;
+  /** what it costs to message this user (POST /api/messages with a page they own) */
+  messagePriceCents: number;
+  acceptsMessages: boolean;
+}
+
+/** A paid message from one user to another, about one of the recipient's pages or as a reply. */
+export interface Message {
+  id: string;
+  fromUid: string;
+  fromName: string;
+  toUid: string;
+  toName: string;
+  /** the page the conversation is about (kept on replies), null when there is none */
+  pageSlug: string | null;
+  pageTitle: string | null;
+  /** the message this one answers */
+  replyToId: string | null;
+  text: string;
+  /** what the sender paid */
+  priceCents: number;
+  createdAt: string;
+}
+
+export interface SendMessageResult {
+  message: Message;
+  /** cents charged to the sender */
+  charged: number;
+  /** the sender's balance after the charge */
+  balance: number;
 }
 
 export type LedgerType =
@@ -109,14 +146,19 @@ export type LedgerType =
   | "comment_create"
   | "rent_first"
   | "rent"
-  | "adjustment";
+  | "adjustment"
+  /** the page author's share of a comment on their page */
+  | "comment_earning"
+  | "message_send"
+  /** the recipient's share of a message */
+  | "message_earning";
 
 export interface LedgerEntry {
   id: string;
   type: LedgerType;
   amount: number;
   balanceAfter: number;
-  ref: { kind: "page" | "comment" | "stripe" | "system"; id: string } | null;
+  ref: { kind: "page" | "comment" | "message" | "stripe" | "system"; id: string } | null;
   createdAt: string;
 }
 

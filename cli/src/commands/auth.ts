@@ -66,7 +66,7 @@ export function registerAuthCommands(program: Command) {
     .action(async () => {
       try {
         const { account, via } = await requireAuth().me();
-        print({ ...account, via }, (a: typeof account) => `${a.displayName} (${a.uid}) · balance ${cents(a.balance)} · ${a.counts.pages} pages · ${a.counts.comments} comments`);
+        print({ ...account, via }, (a: typeof account) => `${a.displayName} (${a.uid}) · balance ${cents(a.balance)} · earned ${cents(a.totalEarned)} · ${a.counts.pages} pages · ${a.counts.comments} comments · message price ${cents(a.messagePriceCents)}`);
       } catch (err) {
         fail(err);
       }
@@ -78,7 +78,10 @@ export function registerAuthCommands(program: Command) {
     .action(async () => {
       try {
         const { account } = await requireAuth().me();
-        print({ balance: account.balance, formatted: formatCents(account.balance), topupUrl: account.topupUrl }, (b: { formatted: string; topupUrl: string }) => `${b.formatted} (top up: ${b.topupUrl})`);
+        print(
+          { balance: account.balance, formatted: formatCents(account.balance), totalEarned: account.totalEarned, topupUrl: account.topupUrl },
+          (b: { formatted: string; totalEarned: number; topupUrl: string }) => `${b.formatted}${b.totalEarned > 0 ? ` (${formatCents(b.totalEarned)} earned from comments and messages)` : ""} · top up: ${b.topupUrl}`,
+        );
       } catch (err) {
         fail(err);
       }

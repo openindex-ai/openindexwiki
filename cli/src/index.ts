@@ -3,6 +3,7 @@ import { CLI_BIN } from "@openindex/wiki-shared";
 import { registerAuthCommands } from "./commands/auth";
 import { registerCommentCommands } from "./commands/comments";
 import { registerMemberCommands } from "./commands/members";
+import { registerMessageCommands } from "./commands/messages";
 import { registerMiscCommands } from "./commands/misc";
 import { registerPageCommands } from "./commands/pages";
 import { registerPayoutsCommands } from "./commands/payouts";
@@ -30,6 +31,7 @@ registerAuthCommands(program);
 registerPageCommands(program);
 registerCommentCommands(program);
 registerMemberCommands(program);
+registerMessageCommands(program);
 registerPayoutsCommands(program);
 registerMiscCommands(program);
 

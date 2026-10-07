@@ -1,13 +1,18 @@
 import { z } from "zod";
 import {
+  COMMENT_COST,
+  DEFAULT_MESSAGE_PRICE_CENTS,
   LIMITS,
+  MAX_MESSAGE_PRICE_CENTS,
   MAX_REFERRAL_FEE_BPS,
   MAX_RENT_CENTS_PER_DAY,
   MAX_SALE_CENTS,
   MAX_TOPUP_CENTS,
   MIN_SALE_CENTS,
+  MESSAGE_CONFIRM_ABOVE_CENTS,
   MIN_TOPUP_CENTS,
   SALE_DESCRIPTION_MAX,
+  formatCents,
 } from "./constants";
 import { jsonValueSchema } from "./schemas";
 import { PAGE_TYPES } from "./page-types";
@@ -130,7 +135,7 @@ export const MCP_TOOLS = {
   wiki_whoami: def({
     name: "wiki_whoami",
     title: "Who am I",
-    description: "The authenticated account: uid, display name, credit balance (cents) and top-up URL.",
+    description: "The authenticated account: uid, display name, credit balance and earnings (cents), message price and email settings, and top-up URL.",
     inputSchema: z.object({}),
     annotations: ro,
   }),
@@ -179,7 +184,7 @@ export const MCP_TOOLS = {
   wiki_add_comment: def({
     name: "wiki_add_comment",
     title: "Comment on a page",
-    description: "Post a comment (costs credits) on a page, optionally replying to another comment via parentId.",
+    description: `Post a comment (costs ${COMMENT_COST} cent, 90% of it goes to the page's author) on a page, optionally replying to another comment via parentId. The author is emailed about it.`,
     inputSchema: z.object({
       slug: z.string().min(1).max(200),
       markdown: z.string().max(LIMITS.commentMarkdownMax).optional(),
@@ -194,6 +199,29 @@ export const MCP_TOOLS = {
     description: "Soft-delete a comment you authored.",
     inputSchema: z.object({ commentId: z.string().min(1).max(128) }),
     annotations: destructive,
+  }),
+  wiki_send_message: def({
+    name: "wiki_send_message",
+    title: "Message a page's author",
+    description: `Send a private plain-text message, emailed to the recipient: to the author of a page (slug), or a reply to a message you sent or received (replyTo). Costs the recipient's message price (default ${formatCents(DEFAULT_MESSAGE_PRICE_CENTS)}, 90% goes to them; see messagePriceCents in wiki_get_profile). Above ${formatCents(MESSAGE_CONFIRM_ABOVE_CENTS)} you must pass maxPriceCents ≥ the price, else 409 PRICE_ABOVE_MAX with the price in 'required'. Email addresses are never revealed; the recipient answers with a reply.`,
+    inputSchema: z.object({
+      slug: z.string().min(1).max(200).optional().describe("Message the author of this page"),
+      replyTo: z.string().min(1).max(128).optional().describe("Reply to this message id instead"),
+      text: z.string().min(1).max(LIMITS.messageMax),
+      maxPriceCents: z.number().int().min(0).max(MAX_MESSAGE_PRICE_CENTS).optional().describe("Most you agree to pay, in cents"),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
+  }),
+  wiki_list_messages: def({
+    name: "wiki_list_messages",
+    title: "List your messages",
+    description: "Messages you received (default) or sent, newest first. Reply with wiki_send_message and replyTo.",
+    inputSchema: z.object({
+      box: z.enum(["received", "sent"]).optional(),
+      limit: z.number().int().min(1).max(LIMITS.listLimitMax).optional(),
+      cursor: z.string().max(500).optional(),
+    }),
+    annotations: ro,
   }),
   wiki_share_page: def({
     name: "wiki_share_page",

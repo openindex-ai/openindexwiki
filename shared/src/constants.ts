@@ -33,6 +33,8 @@ export const LIMITS = {
   apiKeysPerUser: 20,
   /** members (excluding the owner) a page can have */
   membersPerPage: 100,
+  /** plain-text message to a page's author */
+  messageMax: 5000,
 } as const;
 
 /** Pending invites expire after two weeks. */
@@ -58,6 +60,20 @@ export const COMMISSION_HOLD_MS = 14 * 24 * 60 * 60 * 1000;
 /** A commission whose affiliate still cannot receive transfers this long after release is cancelled. */
 export const COMMISSION_MAX_PENDING_MS = 90 * 24 * 60 * 60 * 1000;
 export const STRIPE_DASHBOARD_URL = "https://dashboard.stripe.com";
+
+/**
+ * Earnings in wiki credits. A share of what a user pays goes to another user's balance: the page's
+ * author on a comment, the recipient on a message; the platform keeps the rest. Sub-cent shares are
+ * carried on the earner's account (sales.ts `shareWithCarry`), so ten 1-cent comments pay 9 cents.
+ */
+export const COMMENT_AUTHOR_SHARE_BPS = 9000; // 90% of COMMENT_COST to the page's author
+export const MESSAGE_RECIPIENT_SHARE_BPS = 9000; // 90% of the message price to the recipient
+/** Price to receive a message, set by each user; missing = default. */
+export const DEFAULT_MESSAGE_PRICE_CENTS = 10; // $0.10
+export const MIN_MESSAGE_PRICE_CENTS = 1;
+export const MAX_MESSAGE_PRICE_CENTS = 100_000; // $1,000
+/** Above this price a sender must confirm with maxPriceCents, so no client pays a surprise price. */
+export const MESSAGE_CONFIRM_ABOVE_CENTS = 100; // $1
 
 export const SEARCH = {
   rrfK: 60,

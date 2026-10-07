@@ -1,10 +1,12 @@
 import { z } from "zod";
 import {
   LIMITS,
+  MAX_MESSAGE_PRICE_CENTS,
   MAX_REFERRAL_FEE_BPS,
   MAX_RENT_CENTS_PER_DAY,
   MAX_SALE_CENTS,
   MAX_TOPUP_CENTS,
+  MIN_MESSAGE_PRICE_CENTS,
   MIN_SALE_CENTS,
   MIN_TOPUP_CENTS,
   SALE_DESCRIPTION_MAX,
@@ -83,9 +85,37 @@ export const createKeySchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
 });
 
-export const updateMeSchema = z.object({
-  displayName: z.string().trim().min(1).max(80),
+export const updateMeSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(80).optional(),
+    /** what others pay to message you; you receive 90% */
+    messagePriceCents: z.number().int().min(MIN_MESSAGE_PRICE_CENTS).max(MAX_MESSAGE_PRICE_CENTS).optional(),
+    /** false: nobody can message you */
+    acceptMessages: z.boolean().optional(),
+    /** email me when someone comments on one of my pages */
+    commentEmails: z.boolean().optional(),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), { message: "Nothing to update" });
+export type UpdateMeInput = z.infer<typeof updateMeSchema>;
+
+/** A message to the author of `page`, or a reply to a message you sent or received (`replyTo`). */
+export const sendMessageSchema = z
+  .object({
+    page: z.string().trim().min(1).max(LIMITS.slugMax).optional(),
+    replyTo: z.string().trim().min(1).max(128).optional(),
+    text: z.string().trim().min(1).max(LIMITS.messageMax),
+    /** refuse (409 PRICE_ABOVE_MAX) if the recipient charges more; required above MESSAGE_CONFIRM_ABOVE_CENTS */
+    maxPriceCents: z.number().int().min(0).max(MAX_MESSAGE_PRICE_CENTS).optional(),
+  })
+  .refine((v) => (v.page === undefined) !== (v.replyTo === undefined), { message: "Provide exactly one of page or replyTo" });
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+
+export const listMessagesQuerySchema = z.object({
+  box: z.enum(["received", "sent"]).default("received"),
+  limit: z.coerce.number().int().min(1).max(LIMITS.listLimitMax).default(LIMITS.listLimitDefault),
+  cursor: z.string().max(500).optional(),
 });
+export type ListMessagesQuery = z.infer<typeof listMessagesQuerySchema>;
 
 export const listPagesQuerySchema = z.object({
   tag: z.string().trim().max(50).optional(),

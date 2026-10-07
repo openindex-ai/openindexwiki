@@ -9,11 +9,14 @@
  */
 import {
   BPS_DENOMINATOR,
+  DEFAULT_MESSAGE_PRICE_CENTS,
   DEFAULT_PLATFORM_FEE_BPS,
   DEFAULT_REFERRAL_FEE_BPS,
+  MAX_MESSAGE_PRICE_CENTS,
   MAX_PLATFORM_FEE_BPS,
   MAX_REFERRAL_FEE_BPS,
   MAX_SALE_CENTS,
+  MIN_MESSAGE_PRICE_CENTS,
   MIN_SALE_CENTS,
 } from "./constants";
 
@@ -28,6 +31,26 @@ export type SaleSource = "seller_link";
 /** Fee from a rate, rounded down so the platform never takes (or pays) more than the rate. */
 export function feeFromBps(amountCents: number, bps: number): number {
   return Math.floor((amountCents * bps) / BPS_DENOMINATOR);
+}
+
+/**
+ * An earner's share of a payment in whole cents, carrying the sub-cent remainder. `carry` is in
+ * 1/BPS_DENOMINATOR of a cent (0 ≤ carry < BPS_DENOMINATOR) and lives on the earner's account, so
+ * the split stays exact over time: ten 1-cent payments at 9000 bps credit 9 cents in total.
+ */
+export function shareWithCarry(amountCents: number, bps: number, carry: number | null | undefined): { creditCents: number; carry: number } {
+  if (!Number.isInteger(amountCents) || amountCents < 0) throw new RangeError("amountCents must be a non-negative integer");
+  if (!isBps(bps, BPS_DENOMINATOR)) throw new RangeError(`bps must be an integer between 0 and ${BPS_DENOMINATOR}`);
+  const start = typeof carry === "number" && Number.isInteger(carry) && carry >= 0 && carry < BPS_DENOMINATOR ? carry : 0;
+  const total = start + amountCents * bps;
+  return { creditCents: Math.floor(total / BPS_DENOMINATOR), carry: total % BPS_DENOMINATOR };
+}
+
+/** The user's price to receive a message when valid, else the default. */
+export function resolveMessagePrice(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isInteger(value) && value >= MIN_MESSAGE_PRICE_CENTS && value <= MAX_MESSAGE_PRICE_CENTS
+    ? value
+    : DEFAULT_MESSAGE_PRICE_CENTS;
 }
 
 function isBps(v: unknown, max: number): v is number {
