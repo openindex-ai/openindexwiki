@@ -9,6 +9,7 @@
     "url": "https://www.openindex.ai"
   },
   "homepage": "https://www.openindex.ai",
+  "documentationUrl": "https://www.openindex.ai/docs",
   "privacyPolicyUrl": "https://www.openindex.ai/privacy",
   "icon": ".claude-plugin/icon.png",
   "repository": "https://github.com/openindex-ai/openindexwiki",
