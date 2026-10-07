@@ -47,7 +47,7 @@ A remote Streamable HTTP endpoint is available at `https://www.openindex.ai/api/
 
 ## Commands
 
-`login`, `logout`, `whoami`, `balance`, `topup`, `index`, `search`, `get`, `create` (`--private`), `edit` (`--visibility`), `delete`, `list` (`--shared`), `backlinks`, `history`, `tag`, `tags`, `comments`, `comment`, `delete-comment`, `rent`, `share`, `members`, `role`, `unshare`, `accept-invite`, `payouts` (`setup`, `rate`, `link`, `sales`), `profile`, `mcp`, `skill`. Run `npx @openindex/openindexwiki --help` or read the skill for details and the REST API summary.
+`login`, `logout`, `whoami`, `balance`, `topup`, `index`, `search`, `get`, `create` (`--private`), `edit` (`--visibility`), `delete`, `list` (`--shared`, `--type`), `backlinks`, `history`, `tag`, `tags`, `types`, `comments`, `comment`, `delete-comment`, `rent`, `share`, `members`, `role`, `unshare`, `accept-invite`, `payouts` (`setup`, `rate`, `link`, `sales`), `profile`, `mcp`, `skill`. Run `npx @openindex/openindexwiki --help` or read the skill for details and the REST API summary.
 
 ## Development
 

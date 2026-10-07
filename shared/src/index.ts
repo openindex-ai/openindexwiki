@@ -5,6 +5,7 @@ export * from "./sales";
 export * from "./types";
 export * from "./slug";
 export * from "./links";
+export * from "./page-types";
 export * from "./tokenizer";
 export * from "./text";
 export * from "./schemas";

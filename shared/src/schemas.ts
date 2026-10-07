@@ -89,6 +89,8 @@ export const updateMeSchema = z.object({
 
 export const listPagesQuerySchema = z.object({
   tag: z.string().trim().max(50).optional(),
+  /** page type (top-level json.type); combines with any sort but not with tag, owner or member */
+  type: z.string().trim().max(80).optional(),
   owner: z.string().trim().max(128).optional(),
   /** "me": pages shared with the authenticated user (any role); recent sort only */
   member: z.literal("me").optional(),

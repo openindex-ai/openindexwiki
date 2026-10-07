@@ -2,7 +2,7 @@ import type { Command } from "commander";
 import { titleFromSlug, type EditEntry, type IndexData, type Page, type PageResponse, type PageSummary, type SearchResponse } from "@openindex/wiki-shared";
 import { resolveContent, type ContentFlags } from "../content";
 import { getClient, requireAuth } from "../context";
-import { UsageError, fail, print, table, truncate, cents } from "../output";
+import { UsageError, fail, log, print, table, truncate, cents } from "../output";
 
 function contentOptions(cmd: Command): Command {
   return cmd
@@ -14,20 +14,21 @@ function contentOptions(cmd: Command): Command {
 }
 
 export function pageLine(p: PageSummary): string[] {
-  return [p.slug, truncate(p.title, 40), p.rentActive > 0 ? cents(p.rentActive) + "/d" : "", String(p.commentCount), p.ownerName, p.updatedAt.slice(0, 10), p.visibility === "private" ? "private" : ""];
+  return [p.slug, truncate(p.title, 40), p.type ?? "", p.rentActive > 0 ? cents(p.rentActive) + "/d" : "", String(p.commentCount), p.ownerName, p.updatedAt.slice(0, 10), p.visibility === "private" ? "private" : ""];
 }
 
 export function pagesTable(pages: PageSummary[]): string {
   if (pages.length === 0) return "(no pages)";
   return table(
     pages.map(pageLine),
-    ["slug", "title", "rent", "comments", "owner", "updated", "access"],
+    ["slug", "title", "type", "rent", "comments", "owner", "updated", "access"],
   );
 }
 
 function pageText(r: PageResponse): string {
   const { page, backlinks, backlinkCount, linkTargets } = r;
   const lines = [`# ${page.title}`, `${page.url}  ·  by ${page.ownerName}  ·  v${page.version}  ·  updated ${page.updatedAt.slice(0, 10)}`];
+  if (page.type) lines.push(`type: ${page.type}`);
   if (page.tags.length) lines.push(`tags: ${page.tags.map((t) => "#" + t).join(" ")}`);
   if (page.visibility === "private") lines.push("visibility: private (only the owner and members can read this page)");
   if (page.rent.active > 0) lines.push(`rent: ${cents(page.rent.active)}/day (${page.rent.status})`);
@@ -57,8 +58,8 @@ export function registerPageCommands(program: Command) {
           r.results.length === 0
             ? `No results for "${r.query}".`
             : table(
-                r.results.map((x, i) => [String(i + 1), x.slug, truncate(x.title, 40), x.signals.bm25Rank ? `kw#${x.signals.bm25Rank}` : "", x.signals.semanticRank ? `sem#${x.signals.semanticRank}` : "", x.rentActive > 0 ? cents(x.rentActive) + "/d" : ""]),
-                ["#", "slug", "title", "keyword", "semantic", "rent"],
+                r.results.map((x, i) => [String(i + 1), x.slug, truncate(x.title, 40), x.type ?? "", x.signals.bm25Rank ? `kw#${x.signals.bm25Rank}` : "", x.signals.semanticRank ? `sem#${x.signals.semanticRank}` : "", x.rentActive > 0 ? cents(x.rentActive) + "/d" : ""]),
+                ["#", "slug", "title", "type", "keyword", "semantic", "rent"],
               ) + `\n(${r.results.length} results, ${r.took} ms)`,
         );
       } catch (err) {
@@ -96,8 +97,9 @@ export function registerPageCommands(program: Command) {
     async (opts: { title: string; private?: boolean } & ContentFlags) => {
       try {
         const content = await resolveContent(opts);
-        const { page } = await requireAuth().createPage({ title: opts.title, markdown: content.markdown, json: content.json, visibility: opts.private ? "private" : undefined });
-        print(page, (p: Page) => `Created ${p.url} (v${p.version}${p.visibility === "private" ? ", private" : ""})`);
+        const { page, hint } = await requireAuth().createPage({ title: opts.title, markdown: content.markdown, json: content.json, visibility: opts.private ? "private" : undefined });
+        print(page, (p: Page) => `Created ${p.url} (v${p.version}${p.visibility === "private" ? ", private" : ""}${p.type ? `, type ${p.type}` : ""})`);
+        if (hint) log(`hint: ${hint}`);
       } catch (err) {
         fail(err);
       }
@@ -125,8 +127,9 @@ export function registerPageCommands(program: Command) {
           patch.visibility = opts.visibility;
         }
         if (Object.keys(patch).length === 0) throw new UsageError("Nothing to change: pass --title, --markdown/--markdown-file/--stdin, --data/--data-file, --clear-data or --visibility");
-        const { page } = await requireAuth().updatePage(slug, patch);
+        const { page, hint } = await requireAuth().updatePage(slug, patch);
         print(page, (p: Page) => `Updated ${p.url} (v${p.version})`);
+        if (hint) log(`hint: ${hint}`);
       } catch (err) {
         fail(err);
       }
@@ -162,15 +165,17 @@ export function registerPageCommands(program: Command) {
     .option("-o, --owner <uid>", "owner uid, or 'me' (includes your private pages)")
     .option("--shared", "pages shared with you (any role); requires login")
     .option("-t, --tag <tag>", "filter by hashtag")
+    .option("--type <type>", "only pages of this type (person, organization, software...); see `types`")
     .option("-s, --sort <sort>", "recent | rent | alpha", "recent")
     .option("--from <prefix>", "alpha sort: start at this letter, prefix or slug")
     .option("-l, --limit <n>", "max results", "20")
     .option("--cursor <cursor>", "pagination cursor from a previous call")
-    .action(async (opts: { owner?: string; shared?: boolean; tag?: string; sort: "recent" | "rent" | "alpha"; from?: string; limit: string; cursor?: string }) => {
+    .action(async (opts: { owner?: string; shared?: boolean; tag?: string; type?: string; sort: "recent" | "rent" | "alpha"; from?: string; limit: string; cursor?: string }) => {
       try {
-        if (opts.shared && (opts.owner || opts.tag || opts.sort !== "recent")) throw new UsageError("--shared cannot be combined with --owner, --tag or --sort");
+        if (opts.shared && (opts.owner || opts.tag || opts.type || opts.sort !== "recent")) throw new UsageError("--shared cannot be combined with --owner, --tag, --type or --sort");
+        if (opts.type && (opts.owner || opts.tag)) throw new UsageError("--type cannot be combined with --owner or --tag; search with a type: filter instead");
         const client = opts.owner === "me" || opts.shared ? requireAuth() : getClient();
-        const res = await client.listPages({ owner: opts.owner, member: opts.shared ? "me" : undefined, tag: opts.tag, sort: opts.sort, from: opts.from, limit: Number(opts.limit), cursor: opts.cursor });
+        const res = await client.listPages({ owner: opts.owner, member: opts.shared ? "me" : undefined, tag: opts.tag, type: opts.type, sort: opts.sort, from: opts.from, limit: Number(opts.limit), cursor: opts.cursor });
         print(res, (r: typeof res) => pagesTable(r.pages) + (r.nextCursor ? `\nnext: --cursor ${r.nextCursor}` : ""));
       } catch (err) {
         fail(err);
@@ -179,7 +184,7 @@ export function registerPageCommands(program: Command) {
 
   program
     .command("index")
-    .description("Wiki overview: categories, hubs (most linked), wanted pages (linked but missing), top tags, recent pages")
+    .description("Wiki overview: categories, hubs (most linked), wanted pages (linked but missing), top tags, page types, recent pages")
     .action(async () => {
       try {
         const res = await getClient().index();
@@ -191,6 +196,7 @@ export function registerPageCommands(program: Command) {
           out.push("", "Wanted pages (linked but not written yet):");
           out.push(r.wanted.length ? table(r.wanted.map((w) => [w.slug, w.suggestedTitle, `wanted by ${w.count}`])) : "  (none)");
           out.push("", `Top tags: ${r.tags.map((t) => `#${t.tag} (${t.pageCount})`).join(" ") || "(none)"}`);
+          out.push("", `Types: ${r.types.map((t) => `${t.type} (${t.pageCount})`).join(" ") || "(none)"}`);
           out.push("", "Recent:");
           out.push(pagesTable(r.recent));
           return out.join("\n");
@@ -246,6 +252,26 @@ export function registerPageCommands(program: Command) {
       try {
         const res = await getClient().tag(tag.replace(/^#/, ""), { limit: Number(opts.limit), cursor: opts.cursor });
         print(res, (r: typeof res) => `#${r.tag} (${r.pageCount} pages)\n` + pagesTable(r.pages) + (r.nextCursor ? `\nnext: --cursor ${r.nextCursor}` : ""));
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+  program
+    .command("types")
+    .description("Page types in use (the top-level type of their JSON), with page counts; list one with `list --type <type>`")
+    .option("-l, --limit <n>", "max results", "100")
+    .action(async (opts: { limit: string }) => {
+      try {
+        const res = await getClient().types(Number(opts.limit));
+        print(res, (r: typeof res) => {
+          const used = new Set(r.types.map((t) => t.type));
+          const unused = r.recommended.filter((t) => !used.has(t));
+          return (
+            (r.types.length ? table(r.types.map((t) => [t.type, String(t.pageCount), r.recommended.includes(t.type) ? "" : "not recommended"]), ["type", "pages", ""]) : "(no typed pages yet)") +
+            (unused.length ? `\nRecommended, not used yet: ${unused.join(", ")}` : "")
+          );
+        });
       } catch (err) {
         fail(err);
       }

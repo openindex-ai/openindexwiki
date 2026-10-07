@@ -27,6 +27,8 @@ export interface PageSummary {
   title: string;
   summary: string;
   tags: string[];
+  /** what the page describes: its top-level json.type, normalized (see page-types.ts); null when it has none */
+  type: string | null;
   ownerId: string;
   ownerName: string;
   rentActive: number;
@@ -185,6 +187,12 @@ export interface TagInfo {
   pageCount: number;
 }
 
+/** A page type and how many public pages carry it. */
+export interface TypeInfo {
+  type: string;
+  pageCount: number;
+}
+
 export interface Paginated<T> {
   items: T[];
   nextCursor: string | null;
@@ -216,6 +224,8 @@ export interface IndexData {
   hubs: HubPage[];
   wanted: WantedPage[];
   tags: TagInfo[];
+  /** page types by number of public pages */
+  types: TypeInfo[];
   recent: PageSummary[];
   totalPages: number;
 }

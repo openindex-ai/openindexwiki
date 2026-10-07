@@ -18,7 +18,7 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       return client.getPage(slug);
     }
     case "wiki_list_pages":
-      return client.listPages({ tag: s(args.tag), owner: s(args.owner), member: args.shared === true ? "me" : undefined, sort: args.sort as "recent" | "rent" | "alpha" | undefined, from: s(args.from), limit: n(args.limit), cursor: s(args.cursor) });
+      return client.listPages({ tag: s(args.tag), type: s(args.type), owner: s(args.owner), member: args.shared === true ? "me" : undefined, sort: args.sort as "recent" | "rent" | "alpha" | undefined, from: s(args.from), limit: n(args.limit), cursor: s(args.cursor) });
     case "wiki_get_index":
       return client.index();
     case "wiki_get_backlinks": {

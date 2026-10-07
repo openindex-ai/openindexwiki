@@ -10,6 +10,7 @@ import {
   SALE_DESCRIPTION_MAX,
 } from "./constants";
 import { jsonValueSchema } from "./schemas";
+import { PAGE_TYPES } from "./page-types";
 import { memberRoleSchema, pageVisibilitySchema } from "./access";
 
 export interface ToolAnnotations {
@@ -63,9 +64,10 @@ export const MCP_TOOLS = {
     name: "wiki_list_pages",
     title: "List pages",
     description:
-      "List pages, optionally filtered by tag or owner uid, sorted by 'recent' (default), 'rent', or 'alpha' (A-Z by slug; combine with `from` to jump to a letter or prefix; alpha cannot be combined with tag/owner). Public pages only, except owner='me' (includes your private pages) and shared=true (pages shared with you).",
+      "List pages, optionally filtered by tag, type or owner uid, sorted by 'recent' (default), 'rent', or 'alpha' (A-Z by slug; combine with `from` to jump to a letter or prefix; alpha cannot be combined with tag/owner). `type` lists every public page of that type (e.g. person, organization, software); it cannot be combined with tag, owner or shared. Public pages only, except owner='me' (includes your private pages) and shared=true (pages shared with you).",
     inputSchema: z.object({
       tag: z.string().max(50).optional(),
+      type: z.string().max(80).optional().describe("Page type, e.g. person, organization, software, mcp_server (the page's top-level json.type)"),
       owner: z.string().max(128).optional().describe("Owner uid, or 'me'"),
       shared: z.boolean().optional().describe("true: only pages shared with you (any role); recent sort only"),
       sort: z.enum(["recent", "rent", "alpha"]).optional(),
@@ -79,7 +81,7 @@ export const MCP_TOOLS = {
     name: "wiki_get_index",
     title: "Wiki index",
     description:
-      "Overview of the wiki: category pages (tagged #category), hub pages (most linked-to), wanted pages (most linked-to slugs that do not exist yet: the best gaps to fill), top tags, recent pages and the total page count. Start here to orient yourself.",
+      "Overview of the wiki: category pages (tagged #category), hub pages (most linked-to), wanted pages (most linked-to slugs that do not exist yet: the best gaps to fill), top tags, page types with their counts, recent pages and the total page count. Start here to orient yourself.",
     inputSchema: z.object({}),
     annotations: ro,
   }),
@@ -145,7 +147,7 @@ export const MCP_TOOLS = {
     name: "wiki_create_page",
     title: "Create a page",
     description:
-      "Create a new wiki page (costs credits). Title is required; provide markdown and/or json. Link to other pages with [text](/page/slug) or [[slug]]; use #hashtags to tag. visibility 'private' makes the page readable only by you and the members you share it with (not searchable, no rent).",
+      `Create a new wiki page (costs credits). Title is required; provide markdown and/or json. Link to other pages with [text](/page/slug) or [[slug]]; use #hashtags to tag. Start json with a top-level "type" naming what the page describes (${PAGE_TYPES.join(", ")}; page "types" has the list) so type: search filters and type lists find it; the response carries a "hint" when the type is missing or not a recommended one. visibility 'private' makes the page readable only by you and the members you share it with (not searchable, no rent).`,
     inputSchema: z.object({
       title: z.string().min(1).max(LIMITS.titleMax),
       markdown: z.string().max(LIMITS.markdownMax).optional(),

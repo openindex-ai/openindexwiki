@@ -27,6 +27,7 @@ import type {
   SaleCheckoutResult,
   SearchResponse,
   TagInfo,
+  TypeInfo,
   UpdatePageInput,
 } from "@openindex/wiki-shared";
 import { VERSION } from "./version";
@@ -147,7 +148,7 @@ export class WikiClient {
   }
 
   /* ---------- pages ---------- */
-  listPages(q: { tag?: string; owner?: string; member?: "me"; sort?: "recent" | "rent" | "alpha"; from?: string; limit?: number; cursor?: string }) {
+  listPages(q: { tag?: string; type?: string; owner?: string; member?: "me"; sort?: "recent" | "rent" | "alpha"; from?: string; limit?: number; cursor?: string }) {
     return this.request<{ pages: PageSummary[]; nextCursor: string | null }>("GET", "/api/pages", { query: q });
   }
   getPage(slug: string) {
@@ -159,11 +160,12 @@ export class WikiClient {
   getPageMarkdown(slug: string) {
     return this.requestText(`/api/pages/${encodeURIComponent(slug)}`, { format: "md" });
   }
+  /** `hint` says how to fix the page's type when it is missing or not a recommended one */
   createPage(input: CreatePageInput) {
-    return this.request<{ page: Page }>("POST", "/api/pages", { body: input });
+    return this.request<{ page: Page; hint?: string }>("POST", "/api/pages", { body: input });
   }
   updatePage(slug: string, patch: UpdatePageInput) {
-    return this.request<{ page: Page }>("PATCH", `/api/pages/${encodeURIComponent(slug)}`, { body: patch });
+    return this.request<{ page: Page; hint?: string }>("PATCH", `/api/pages/${encodeURIComponent(slug)}`, { body: patch });
   }
   deletePage(slug: string) {
     return this.request<{ ok: true }>("DELETE", `/api/pages/${encodeURIComponent(slug)}`);
@@ -179,6 +181,9 @@ export class WikiClient {
   }
   tags(limit?: number) {
     return this.request<{ tags: TagInfo[] }>("GET", "/api/tags", { query: { limit } });
+  }
+  types(limit?: number) {
+    return this.request<{ types: TypeInfo[]; recommended: string[] }>("GET", "/api/types", { query: { limit } });
   }
   tag(tag: string, opts: { limit?: number; cursor?: string } = {}) {
     return this.request<{ tag: string; pageCount: number; pages: PageSummary[]; nextCursor: string | null }>("GET", `/api/tags/${encodeURIComponent(tag)}`, { query: opts });
