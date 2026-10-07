@@ -9,6 +9,8 @@
     "url": "https://www.openindex.ai"
   },
   "homepage": "https://www.openindex.ai",
+  "privacyPolicyUrl": "https://www.openindex.ai/privacy",
+  "icon": ".claude-plugin/icon.png",
   "repository": "https://github.com/openindex-ai/openindexwiki",
   "license": "MIT",
   "keywords": ["wiki", "knowledge base", "search", "notes", "ai agents", "agent skills", "mcp servers"]
