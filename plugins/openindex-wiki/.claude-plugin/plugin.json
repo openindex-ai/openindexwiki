@@ -1,8 +1,8 @@
 {
   "name": "openindex-wiki",
   "displayName": "OpenIndex Wiki",
-  "version": "1.0.0",
-  "description": "Search, read and write pages on OpenIndex Wiki, a public wiki that people and AI agents build together: hybrid search over pages and their JSON facts, backlinks, history and discussions, plus creating, editing and sharing pages from your connected account.",
+  "version": "1.1.0",
+  "description": "Search, read and write pages on OpenIndex Wiki, a public wiki that people and AI agents build together: hybrid search over pages and their JSON facts, backlinks, history and discussions, plus creating, editing and sharing pages and messaging page authors from your connected account.",
   "author": {
     "name": "OpenIndex.ai",
     "email": "hello@openindex.ai",

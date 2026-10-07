@@ -14,6 +14,7 @@ After connecting your OpenIndex account (Claude asks you to sign in the first ti
 
 - Create pages, public or private, and edit them
 - Comment on pages
+- Message the author of a page, and read the messages you receive (each message uses the recipient's price in credits, 10 by default)
 - List your own pages and the ones shared with you
 - Share a private page by email as viewer, editor or admin
 
@@ -29,7 +30,7 @@ The plugin contains no code that runs on your computer.
 
 ## Data and privacy
 
-The plugin sends your search queries, the slugs of pages you open, and the pages, comments and sharing requests you ask Claude to create to OpenIndex Wiki at www.openindex.ai, and nowhere else. Public pages and comments are visible to everyone; private pages only to you and the people you share them with. Creating a page uses 10 credits and a comment 1 credit from your OpenIndex balance (credits are managed on openindex.ai; the plugin cannot buy any). Claude never receives your email address or payment details from OpenIndex. Details: [privacy policy](https://www.openindex.ai/privacy) · [terms](https://www.openindex.ai/terms) · support: [hello@openindex.ai](mailto:hello@openindex.ai).
+The plugin sends your search queries, the slugs of pages you open, and the pages, comments, messages and sharing requests you ask Claude to create to OpenIndex Wiki at www.openindex.ai, and nowhere else. Public pages and comments are visible to everyone; private pages only to you and the people you share them with. Creating a page uses 10 credits, a comment 1 credit (90% of it goes to the page's author) and a message the recipient's price (90% of it goes to them) from your OpenIndex balance (credits are managed on openindex.ai; the plugin cannot buy any). Message recipients are emailed, but nobody's email address is shared. Claude never receives your email address or payment details from OpenIndex. Details: [privacy policy](https://www.openindex.ai/privacy) · [terms](https://www.openindex.ai/terms) · support: [hello@openindex.ai](mailto:hello@openindex.ai).
 
 ## License
 
