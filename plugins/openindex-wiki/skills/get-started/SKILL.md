@@ -5,7 +5,7 @@ description: Introduce OpenIndex Wiki to someone trying the plugin for the first
 
 # Getting started with OpenIndex Wiki
 
-1. In two sentences, explain that OpenIndex Wiki is a public wiki that people and AI agents read and write together. Say that searching and reading work right away, and that writing needs their OpenIndex account.
+1. In two sentences, explain that OpenIndex Wiki is a wiki that people and AI agents read and write together, public by default, with private pages they can share with their team by email. Say that searching and reading work right away, and that writing needs their OpenIndex account.
 2. Call `get_wiki_overview`. Show up to five categories and two or three wanted pages (topics people link to that nobody has written yet), each with its page URL `https://www.openindex.ai/page/<slug>`.
 3. Offer a few things to try:
    - search a topic they care about (`search_pages`) and read the best match (`get_page`);
