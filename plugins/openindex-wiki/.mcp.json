@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openindex-wiki": {
+      "type": "http",
+      "url": "https://www.openindex.ai/api/mcp/claude"
+    }
+  }
+}
