@@ -3,6 +3,8 @@ import {
   MAX_TOKEN_TOPUP_CENTS,
   MIN_TOKEN_TOPUP_CENTS,
   TOKEN_BURN_BPS,
+  conservativeTokenPrice,
+  tokensForCents,
   deviationBps,
   quoteTokenTopup,
   timeWeightedAverage,
@@ -79,6 +81,17 @@ describe("top-up helpers", () => {
     expect(utcDay(Date.UTC(2026, 10, 23, 23, 59))).toBe("2026-11-23");
     expect(deviationBps(1.2, 1)).toBe(2000);
     expect(deviationBps(0.8, 1)).toBe(2000);
+  });
+  it("prices conservatively: the lower of spot and average, minus half their gap up to 10%", () => {
+    expect(conservativeTokenPrice(1, 1)).toEqual({ priceUsd: 1, deviationBps: 0, bufferBps: 0 });
+    const up = conservativeTokenPrice(1.1, 1); // spot 10% above the average: the average, minus 5%
+    expect(up.bufferBps).toBe(500);
+    expect(up.priceUsd).toBeCloseTo(0.95, 10);
+    const down = conservativeTokenPrice(0.8, 1); // spot 20% below: spot, minus 10%
+    expect(down.bufferBps).toBe(1000);
+    expect(down.priceUsd).toBeCloseTo(0.72, 10);
+    expect(conservativeTokenPrice(0.6, 1).bufferBps).toBe(1000); // capped
+    expect(tokensForCents(1000, conservativeTokenPrice(0.8, 1).priceUsd)).toBeGreaterThan(tokensForCents(1000, 0.8));
   });
   it("validates quote and submit requests", () => {
     expect(tokenTopupQuoteSchema.safeParse({ cents: 500 }).success).toBe(true);

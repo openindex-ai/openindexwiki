@@ -14,8 +14,19 @@ import {
 import { memberRoleSchema, pageVisibilitySchema } from "./access";
 import { TASK_DEPENDS_MAX, TASK_FILTERS, TASK_LEASE } from "./tasks";
 import { WEBHOOK_EVENTS } from "./channels";
+import { normalizeHandle } from "./handles";
 
 export const jsonValueSchema = z.json();
+
+/** A handle as input: `@tito` or `tito`, normalized to `tito` (format is checked when it is resolved). */
+export const handleInputSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(LIMITS.handleInputMax)
+  .transform((v) => normalizeHandle(v))
+  .refine((v) => /^[a-z0-9_]{1,30}$/.test(v), { message: "Not a handle (letters, digits and underscores, e.g. @tito)" });
+
 
 const markdownField = (max: number) => z.string().max(max).nullable().optional();
 const jsonField = (max: number) =>
@@ -100,16 +111,18 @@ export const updateMeSchema = z
   .refine((v) => Object.values(v).some((x) => x !== undefined), { message: "Nothing to update" });
 export type UpdateMeInput = z.infer<typeof updateMeSchema>;
 
-/** A message to the author of `page`, or a reply to a message you sent or received (`replyTo`). */
+/** A message to the author of `page`, to the owner of a handle (`to`), or a reply to a message you sent or received (`replyTo`). */
 export const sendMessageSchema = z
   .object({
     page: z.string().trim().min(1).max(LIMITS.slugMax).optional(),
+    /** a handle, `@tito` or `tito` */
+    to: handleInputSchema.optional(),
     replyTo: z.string().trim().min(1).max(128).optional(),
     text: z.string().trim().min(1).max(LIMITS.messageMax),
     /** refuse (409 PRICE_ABOVE_MAX) if the recipient charges more; required above MESSAGE_CONFIRM_ABOVE_CENTS */
     maxPriceCents: z.number().int().min(0).max(MAX_MESSAGE_PRICE_CENTS).optional(),
   })
-  .refine((v) => (v.page === undefined) !== (v.replyTo === undefined), { message: "Provide exactly one of page or replyTo" });
+  .refine((v) => [v.page, v.to, v.replyTo].filter((x) => x !== undefined).length === 1, { message: "Provide exactly one of page, to or replyTo" });
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 
 export const listMessagesQuerySchema = z.object({
@@ -148,10 +161,14 @@ export const backlinksQuerySchema = z.object({
 });
 export type SearchQuery = z.infer<typeof searchQuerySchema>;
 
-export const inviteMemberSchema = z.object({
-  email: z.string().trim().toLowerCase().max(254).pipe(z.email()),
-  role: memberRoleSchema.default("viewer"),
-});
+/** Share with an email address, or with the owner of a handle (no email changes hands). */
+export const inviteMemberSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().max(254).pipe(z.email()).optional(),
+    handle: handleInputSchema.optional(),
+    role: memberRoleSchema.default("viewer"),
+  })
+  .refine((v) => (v.email === undefined) !== (v.handle === undefined), { message: "Provide exactly one of email or handle" });
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 
 export const setMemberRoleSchema = z.object({
@@ -163,7 +180,7 @@ export type SetMemberRoleInput = z.infer<typeof setMemberRoleSchema>;
 export const createSaleCheckoutSchema = z.object({
   amountCents: z.number().int().min(MIN_SALE_CENTS).max(MAX_SALE_CENTS),
   description: z.string().trim().min(1).max(SALE_DESCRIPTION_MAX),
-  /** uid of the wiki user who referred the buyer; earns the seller's referral rate */
+  /** the wiki user who referred the buyer (a uid, or a handle as `@tito`); earns the seller's referral rate */
   affiliateUid: z.string().trim().min(1).max(128).optional(),
 });
 export type CreateSaleCheckoutInput = z.infer<typeof createSaleCheckoutSchema>;
@@ -196,9 +213,13 @@ export type ListSalesQuery = z.infer<typeof listSalesQuerySchema>;
 /* ------------------------------ Channels ------------------------------ */
 
 /** Channel invites default to editor (posting is the point of a channel); page invites default to viewer. */
-export const inviteChannelMemberSchema = inviteMemberSchema.extend({
-  role: memberRoleSchema.default("editor"),
-});
+export const inviteChannelMemberSchema = z
+  .object({
+    email: z.string().trim().toLowerCase().max(254).pipe(z.email()).optional(),
+    handle: handleInputSchema.optional(),
+    role: memberRoleSchema.default("editor"),
+  })
+  .refine((v) => (v.email === undefined) !== (v.handle === undefined), { message: "Provide exactly one of email or handle" });
 
 export const createChannelSchema = z.object({
   name: z.string().trim().min(1).max(LIMITS.channelNameMax),

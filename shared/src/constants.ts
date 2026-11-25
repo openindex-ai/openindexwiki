@@ -36,6 +36,8 @@ export const LIMITS = {
   membersPerPage: 100,
   /** plain-text message to a page's author */
   messageMax: 5000,
+  /** "@" plus a 30-character handle, with room for whitespace */
+  handleInputMax: 40,
   channelNameMax: 80,
   channelDescriptionMax: 2000,
   /** members (excluding the owner) a channel can have */

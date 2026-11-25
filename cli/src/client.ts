@@ -227,7 +227,7 @@ export class WikiClient {
   members(slug: string) {
     return this.request<MembersResponse>("GET", `/api/pages/${encodeURIComponent(slug)}/members`);
   }
-  invite(slug: string, input: { email: string; role?: MemberRole }) {
+  invite(slug: string, input: ({ email: string } | { handle: string }) & { role?: MemberRole }) {
     return this.request<InviteResult>("POST", `/api/pages/${encodeURIComponent(slug)}/invites`, { body: input });
   }
   setMemberRole(slug: string, uid: string, role: MemberRole) {
@@ -263,7 +263,7 @@ export class WikiClient {
     return this.request<{ rent: Rent }>("PUT", path, { body: { centsPerDay } });
   }
   profile(uid: string) {
-    return this.request<{ profile: PublicProfile; pages: PageSummary[]; comments: Comment[] }>("GET", `/api/users/${encodeURIComponent(uid)}`);
+    return this.request<{ profile: PublicProfile; handles?: Array<{ handle: string; lifetime: boolean }>; pages: PageSummary[]; comments: Comment[] }>("GET", `/api/users/${encodeURIComponent(uid)}`);
   }
   checkout(amountCents: number) {
     return this.request<{ url: string; sessionId: string }>("POST", "/api/credits/checkout", { body: { amountCents } });
@@ -302,7 +302,7 @@ export class WikiClient {
   channelMembers(id: string) {
     return this.request<ChannelMembersResponse>("GET", `/api/channels/${encodeURIComponent(id)}/members`);
   }
-  inviteToChannel(id: string, input: { email: string; role?: MemberRole }) {
+  inviteToChannel(id: string, input: ({ email: string } | { handle: string }) & { role?: MemberRole }) {
     return this.request<InviteResult>("POST", `/api/channels/${encodeURIComponent(id)}/invites`, { body: input });
   }
   setChannelMemberRole(id: string, uid: string, role: MemberRole) {

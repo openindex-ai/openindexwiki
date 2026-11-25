@@ -131,8 +131,11 @@ export const MCP_TOOLS = {
   wiki_get_profile: def({
     name: "wiki_get_profile",
     title: "Get a user profile",
-    description: "Public profile of a user with their pages and comments. Omit uid for the authenticated user.",
-    inputSchema: z.object({ uid: z.string().max(128).optional() }),
+    description: "Public profile of a user with their pages, comments and handles, by uid or by handle (@tito). Omit both for the authenticated user.",
+    inputSchema: z.object({
+      uid: z.string().max(128).optional(),
+      handle: z.string().max(40).optional().describe("A handle such as @tito, instead of uid"),
+    }),
     annotations: ro,
   }),
   wiki_whoami: def({
@@ -205,10 +208,11 @@ export const MCP_TOOLS = {
   }),
   wiki_send_message: def({
     name: "wiki_send_message",
-    title: "Message a page's author",
-    description: `Send a private plain-text message, emailed to the recipient: to the author of a page (slug), or a reply to a message you sent or received (replyTo). Costs the recipient's message price (default ${formatCents(DEFAULT_MESSAGE_PRICE_CENTS)}, 90% goes to them; see messagePriceCents in wiki_get_profile). Above ${formatCents(MESSAGE_CONFIRM_ABOVE_CENTS)} you must pass maxPriceCents ≥ the price, else 409 PRICE_ABOVE_MAX with the price in 'required'. Email addresses are never revealed; the recipient answers with a reply.`,
+    title: "Send a message",
+    description: `Send a private plain-text message, emailed to the recipient: to the author of a page (slug), to the owner of a handle (to, e.g. @tito), or a reply to a message you sent or received (replyTo). Costs the recipient's message price (default ${formatCents(DEFAULT_MESSAGE_PRICE_CENTS)}, 90% goes to them; see messagePriceCents in wiki_get_profile). Above ${formatCents(MESSAGE_CONFIRM_ABOVE_CENTS)} you must pass maxPriceCents ≥ the price, else 409 PRICE_ABOVE_MAX with the price in 'required'. Email addresses are never revealed; the recipient answers with a reply.`,
     inputSchema: z.object({
       slug: z.string().min(1).max(200).optional().describe("Message the author of this page"),
+      to: z.string().min(1).max(40).optional().describe("Message the owner of this handle (@tito) instead"),
       replyTo: z.string().min(1).max(128).optional().describe("Reply to this message id instead"),
       text: z.string().min(1).max(LIMITS.messageMax),
       maxPriceCents: z.number().int().min(0).max(MAX_MESSAGE_PRICE_CENTS).optional().describe("Most you agree to pay, in cents"),
@@ -230,10 +234,11 @@ export const MCP_TOOLS = {
     name: "wiki_share_page",
     title: "Share a page",
     description:
-      "Invite an account by email to a page you own or administer, as 'viewer' (read + comment), 'editor' (edit + comment) or 'admin' (edit + manage members). Existing accounts are added immediately; unknown emails receive an invite email with an accept link. Re-inviting an existing member changes their role.",
+      "Invite an account by email or by handle (@tito) to a page you own or administer, as 'viewer' (read + comment), 'editor' (edit + comment) or 'admin' (edit + manage members). Existing accounts and handle owners are added immediately; unknown emails receive an invite email with an accept link. Re-inviting an existing member changes their role. Pass exactly one of email or handle.",
     inputSchema: z.object({
       slug: z.string().min(1).max(200),
-      email: z.string().min(3).max(254),
+      email: z.string().min(3).max(254).optional(),
+      handle: z.string().min(1).max(40).optional().describe("Share with the owner of this handle (@tito) instead of an email"),
       role: memberRoleSchema.optional().describe("Default 'viewer'"),
     }),
     annotations: write,
@@ -428,10 +433,11 @@ export const MCP_TOOLS = {
     name: "wiki_share_channel",
     title: "Share a channel",
     description:
-      "Add an account to a channel you own or administer, by email, as 'editor' (post, reply, label, work on tasks; the default), 'viewer' (read only) or 'admin' (also manage members and settings). Existing accounts are added immediately; unknown emails receive an invite email. Re-inviting a member changes their role.",
+      "Add an account to a channel you own or administer, by email or by handle (@tito), as 'editor' (post, reply, label, work on tasks; the default), 'viewer' (read only) or 'admin' (also manage members and settings). Existing accounts and handle owners are added immediately; unknown emails receive an invite email. Re-inviting a member changes their role. Pass exactly one of email or handle.",
     inputSchema: z.object({
       channel: z.string().min(1).max(200),
-      email: z.string().min(3).max(254),
+      email: z.string().min(3).max(254).optional(),
+      handle: z.string().min(1).max(40).optional().describe("Add the owner of this handle (@tito) instead of an email"),
       role: memberRoleSchema.optional().describe("Default 'editor'"),
     }),
     annotations: write,

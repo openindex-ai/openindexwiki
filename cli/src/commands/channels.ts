@@ -29,6 +29,7 @@ import {
 import { readStdin } from "../content";
 import { getClient, requireAuth } from "../context";
 import { WikiApiError, type WikiClient } from "../client";
+import { shareTarget } from "./members";
 import { UsageError, fail, isJsonMode, log, print, table, truncate } from "../output";
 
 /* ------------------------------ helpers ------------------------------ */
@@ -286,12 +287,12 @@ export function registerChannelCommands(program: Command) {
     });
 
   channel
-    .command("share <id> <email>")
-    .description("Add someone to a channel by email (existing accounts at once; others get an invite email)")
+    .command("share <id> <who>")
+    .description("Add someone to a channel by email or handle (@tito); existing accounts and handle owners at once, other emails get an invite")
     .option("-r, --role <role>", `${MEMBER_ROLES.join(" | ")} (default editor: can post)`)
-    .action(async (id: string, email: string, opts: { role?: string }) => {
+    .action(async (id: string, who: string, opts: { role?: string }) => {
       try {
-        const res = await requireAuth().inviteToChannel(id, { email, role: parseRole(opts.role) });
+        const res = await requireAuth().inviteToChannel(id, { ...shareTarget(who), role: parseRole(opts.role) });
         print(res, (r: InviteResult) =>
           r.status === "added"
             ? `${r.updated ? "Changed" : "Added"} ${r.member.displayName} (${r.member.uid}) as ${r.member.role} on channel ${id}${r.updated ? "" : r.emailSent ? "; email sent" : "; no email sent"}`

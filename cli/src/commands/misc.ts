@@ -29,14 +29,15 @@ export function registerMiscCommands(program: Command) {
     });
 
   program
-    .command("profile [uid]")
-    .description("Public profile with pages and comments (defaults to yourself)")
+    .command("profile [user]")
+    .description("Public profile with handles, pages and comments, by uid or @handle (defaults to yourself)")
     .action(async (uid?: string) => {
       try {
         const client = uid ? getClient() : requireAuth();
         const res = await client.profile(uid ?? "me");
         print(res, (r: typeof res) => {
-          const head = `${r.profile.displayName} (${r.profile.uid}) · ${r.profile.counts.pages} pages · ${r.profile.counts.comments} comments`;
+          const handles = r.handles?.length ? ` · ${r.handles.map((h) => `@${h.handle}${h.lifetime ? " (lifetime)" : ""}`).join(" ")}` : "";
+          const head = `${r.profile.displayName} (${r.profile.uid})${handles} · ${r.profile.counts.pages} pages · ${r.profile.counts.comments} comments`;
           const comments = r.comments.length ? "\n\nComments:\n" + table(r.comments.map((c) => [c.id, c.pageSlug, truncate(c.markdown ?? JSON.stringify(c.json) ?? "", 50), c.rent.active > 0 ? cents(c.rent.active) + "/d" : ""]), ["id", "page", "text", "rent"]) : "";
           return `${head}\n\nPages:\n${pagesTable(r.pages)}${comments}`;
         });

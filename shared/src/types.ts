@@ -2,6 +2,8 @@
 import type { InviteStatus, MemberRole, PageRole, PageVisibility, ResourceKind } from "./access";
 import type { CapabilityStatus, CommissionCancelReason, CommissionStatus, PayoutsState, SaleSource, SaleStatus } from "./sales";
 import type { HolderTier } from "./token";
+import type { TokenTopupStatus } from "./token-topup";
+import type { HandleFormatProblem, HandlePurchaseKind, HandleState, HandleTerm } from "./handles";
 
 export type PageStatus = "active" | "deleted";
 export type RentStatus = "none" | "active" | "failed";
@@ -105,6 +107,8 @@ export interface Account {
   wallet: LinkedWallet | null;
   /** the linked wallet's $OpenIndex balance and the tier it unlocks; null without a wallet */
   holder: HolderStatus | null;
+  /** your primary handle (without the @) while it resolves, else null; all of them: GET /api/me/handles */
+  handle: string | null;
 }
 
 export interface LinkedWallet {
@@ -148,6 +152,84 @@ export interface PublicProfile {
   acceptsMessages: boolean;
   /** $OpenIndex holder tier of the linked wallet (the address is never public); null below the first tier */
   holderTier: Exclude<HolderTier, "none"> | null;
+  /** the account's primary handle (without the @) while it resolves, else null */
+  handle: string | null;
+  /** whether that handle is a lifetime one (shown as a badge) */
+  handleLifetime: boolean;
+}
+
+/** A handle as anyone can see it (GET /api/handles/{handle}). */
+export interface HandleInfo {
+  handle: string;
+  /** "/@handle" */
+  url: string;
+  state: HandleState;
+  /** the owner while the handle resolves (active or in grace), else null */
+  owner: PublicProfile | null;
+  lifetime: boolean;
+  /** null for lifetime handles */
+  expiresAt: string | null;
+  /** when the current owner first registered it */
+  since: string | null;
+}
+
+/** One of your handles (GET /api/handles?mine=1). */
+export interface OwnedHandle {
+  handle: string;
+  url: string;
+  state: HandleState;
+  lifetime: boolean;
+  expiresAt: string | null;
+  since: string;
+  primary: boolean;
+  /** the last moment you can renew before anyone else may register it (null for lifetime) */
+  renewableUntil: string | null;
+}
+
+/** GET /api/handles/{handle}/availability: whether you can buy it, and the prices. */
+export interface HandleAvailability {
+  handle: string;
+  /** null when the format is fine */
+  problem: HandleFormatProblem | null;
+  problemMessage: string | null;
+  state: HandleState | null;
+  /** what buying it would be for you: register, renew, upgrade (lifetime), or null if you cannot */
+  kind: HandlePurchaseKind | null;
+  reason: string | null;
+  /** prices in USD cents per term; terms you cannot buy now are absent */
+  prices: Partial<Record<HandleTerm, number>>;
+  /** the lifetime price is introductory (a limited-time offer) */
+  lifetimeOffer: boolean;
+  /** shorter than HANDLE_PREMIUM_BELOW characters: every term costs HANDLE_PREMIUM_MULTIPLIER times as much */
+  premium: boolean;
+}
+
+export type HandleQuoteStatus = TokenTopupStatus;
+
+/** A handle purchase paid by burning $OpenIndex (POST /api/handles/quote). */
+export interface HandleQuote {
+  quoteId: string;
+  status: HandleQuoteStatus;
+  handle: string;
+  term: HandleTerm;
+  kind: HandlePurchaseKind;
+  /** a premium (short) handle, priced HANDLE_PREMIUM_MULTIPLIER times */
+  premium: boolean;
+  wallet: string;
+  /** price in USD cents */
+  cents: number;
+  tokensRaw: string;
+  tokens: string;
+  /** all of it is burned */
+  burnRaw: string;
+  priceUsd: number;
+  transaction: string;
+  message: string;
+  expiresAt: string;
+  signature: string | null;
+  error: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
 }
 
 /** A paid message from one user to another, about one of the recipient's pages or as a reply. */

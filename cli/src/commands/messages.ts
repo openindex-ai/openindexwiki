@@ -54,14 +54,15 @@ export function settingsText(a: Account): string {
 
 export function registerMessageCommands(program: Command) {
   program
-    .command("message <slug> [text]")
-    .description("Message the author of a page: costs their message price (default $0.10, 90% goes to them) and emails them")
+    .command("message <target> [text]")
+    .description("Message the author of a page (slug) or the owner of a handle (@tito): costs their message price (default $0.10, 90% goes to them) and emails them")
     .option("--max-price <cents>", "the most you agree to pay, in cents (needed above $1)")
     .option("--file <path>", "read the text from a file")
-    .action(async (slug: string, text: string | undefined, opts: TextFlags & { maxPrice?: string }) => {
+    .action(async (target: string, text: string | undefined, opts: TextFlags & { maxPrice?: string }) => {
       try {
         const maxPriceCents = centsOption(opts.maxPrice, "--max-price");
-        const res = await requireAuth().sendMessage({ page: slug, text: await messageText(text, opts), maxPriceCents });
+        const to = target.startsWith("@") ? { to: target } : { page: target };
+        const res = await requireAuth().sendMessage({ ...to, text: await messageText(text, opts), maxPriceCents });
         print(res, sentText);
       } catch (err) {
         fail(err);

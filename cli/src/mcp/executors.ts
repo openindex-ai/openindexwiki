@@ -33,7 +33,7 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
     case "wiki_get_tag":
       return client.tag(String(args.tag ?? "").replace(/^#/, ""), { limit: n(args.limit) });
     case "wiki_get_profile":
-      return client.profile(s(args.uid) ?? "me");
+      return client.profile(s(args.handle) ? `@${String(args.handle).replace(/^@+/, "")}` : (s(args.uid) ?? "me"));
     case "wiki_whoami":
       return client.me();
     case "wiki_topup_url": {
@@ -57,7 +57,7 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
     case "wiki_delete_comment":
       return client.deleteComment(String(args.commentId ?? ""));
     case "wiki_send_message":
-      return client.sendMessage({ page: s(args.slug), replyTo: s(args.replyTo), text: String(args.text ?? ""), maxPriceCents: n(args.maxPriceCents) });
+      return client.sendMessage({ page: s(args.slug), to: s(args.to), replyTo: s(args.replyTo), text: String(args.text ?? ""), maxPriceCents: n(args.maxPriceCents) });
     case "wiki_list_messages":
       return client.messages({ box: args.box === "sent" ? "sent" : args.box === "received" ? "received" : undefined, limit: n(args.limit), cursor: s(args.cursor) });
     case "wiki_payouts_status":
@@ -73,7 +73,7 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
     case "wiki_list_sales":
       return client.sales({ as: args.as === "affiliate" ? "affiliate" : args.as === "seller" ? "seller" : undefined, limit: n(args.limit), cursor: s(args.cursor) });
     case "wiki_share_page":
-      return client.invite(String(args.slug ?? ""), { email: String(args.email ?? ""), role: role(args.role) });
+      return client.invite(String(args.slug ?? ""), { ...shareArg(args), role: role(args.role) });
     case "wiki_list_members":
       return client.members(String(args.slug ?? ""));
     case "wiki_remove_member": {
@@ -176,7 +176,7 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
       }
     }
     case "wiki_share_channel":
-      return client.inviteToChannel(String(args.channel ?? ""), { email: String(args.email ?? ""), role: role(args.role) });
+      return client.inviteToChannel(String(args.channel ?? ""), { ...shareArg(args), role: role(args.role) });
     case "wiki_remove_channel_member": {
       const channel = String(args.channel ?? "");
       const uid = s(args.uid);
@@ -196,4 +196,9 @@ export async function executeTool(client: WikiClient, name: McpToolName, args: A
     default:
       throw new Error(`Unknown tool ${String(name)}`);
   }
+}
+
+/** wiki_share_page / wiki_share_channel: a handle when given, else the email. */
+function shareArg(args: Record<string, unknown>): { email: string } | { handle: string } {
+  return typeof args.handle === "string" && args.handle.trim() ? { handle: args.handle.trim() } : { email: String(args.email ?? "") };
 }

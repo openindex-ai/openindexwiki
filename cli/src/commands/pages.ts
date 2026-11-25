@@ -60,7 +60,7 @@ export function registerPageCommands(program: Command) {
             : table(
                 r.results.map((x, i) => [String(i + 1), x.slug, truncate(x.title, 40), x.type ?? "", x.signals.bm25Rank ? `kw#${x.signals.bm25Rank}` : "", x.signals.semanticRank ? `sem#${x.signals.semanticRank}` : "", x.rentActive > 0 ? cents(x.rentActive) + "/d" : ""]),
                 ["#", "slug", "title", "type", "keyword", "semantic", "rent"],
-              ) + `\n(${r.results.length} results, ${r.took} ms)`,
+              ) + `\n(${r.results.length} ${r.results.length === 1 ? "result" : "results"}, ${r.took} ms)`,
         );
       } catch (err) {
         fail(err);

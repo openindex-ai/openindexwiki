@@ -18,14 +18,19 @@ export function membersText(r: MembersResponse): string {
   return out.join("\n");
 }
 
+/** `@tito` shares with a handle's owner; anything else is an email address. */
+export function shareTarget(who: string): { email: string } | { handle: string } {
+  return who.trim().startsWith("@") ? { handle: who.trim() } : { email: who.trim() };
+}
+
 export function registerMemberCommands(program: Command) {
   program
-    .command("share <slug> <email>")
-    .description("Share a page you own or administer with an email address (existing accounts are added at once; others get an invite email)")
+    .command("share <slug> <who>")
+    .description("Share a page you own or administer with an email address or a handle (@tito); existing accounts and handle owners are added at once, other emails get an invite")
     .option("-r, --role <role>", `${MEMBER_ROLES.join(" | ")} (default viewer)`)
-    .action(async (slug: string, email: string, opts: { role?: string }) => {
+    .action(async (slug: string, who: string, opts: { role?: string }) => {
       try {
-        const res = await requireAuth().invite(slug, { email, role: parseRole(opts.role) });
+        const res = await requireAuth().invite(slug, { ...shareTarget(who), role: parseRole(opts.role) });
         print(res, (r: InviteResult) =>
           r.status === "added"
             ? `${r.updated ? "Changed" : "Added"} ${r.member.displayName} (${r.member.uid}) as ${r.member.role} on /page/${slug}${r.updated ? "" : r.emailSent ? "; email sent" : "; no email sent"}`

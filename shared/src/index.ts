@@ -4,6 +4,7 @@ export * from "./access";
 export * from "./sales";
 export * from "./token";
 export * from "./token-topup";
+export * from "./handles";
 export * from "./types";
 export * from "./slug";
 export * from "./links";
