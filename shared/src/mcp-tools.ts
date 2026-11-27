@@ -152,7 +152,8 @@ export const MCP_TOOLS = {
     inputSchema: z.object({
       amountCents: z.number().int().min(MIN_TOPUP_CENTS).max(MAX_TOPUP_CENTS).optional(),
     }),
-    annotations: ro,
+    // With amountCents it creates a Stripe Checkout Session: an external write, so never read-only.
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   }),
   wiki_create_page: def({
     name: "wiki_create_page",
